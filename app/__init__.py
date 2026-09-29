@@ -8,8 +8,8 @@ from app.live_textarea_component import live_textarea
 
 
 # Keep small presentation-only adjustments close to the wrapped Streamlit
-# widgets. Suppress obsolete helper copy and add breathing room around the
-# always-visible document summary without changing analysis behavior.
+# widgets. Suppress obsolete helper copy and inject spacing CSS separately so
+# it can never be rendered as visible text inside the summary markup.
 if not getattr(st.markdown, "_turkdet_markdown", False):
     _streamlit_markdown = st.markdown
 
@@ -18,9 +18,8 @@ if not getattr(st.markdown, "_turkdet_markdown", False):
             return None
 
         if isinstance(body, str) and 'class="td-summary-grid"' in body:
-            body = (
-                body
-                + """
+            _streamlit_markdown(
+                """
                 <style>
                   .td-summary-grid {
                     margin-bottom:.65rem !important;
@@ -30,7 +29,8 @@ if not getattr(st.markdown, "_turkdet_markdown", False):
                     margin-top:1rem !important;
                   }
                 </style>
-                """
+                """,
+                unsafe_allow_html=True,
             )
 
         return _streamlit_markdown(body, *args, **kwargs)
