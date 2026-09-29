@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 
 # Remove the native hover tooltip from TürkDet's icon-only theme switch.
@@ -20,9 +19,9 @@ if not getattr(st.button, "_turkdet_button", False):
 
 
 # Hide Streamlit's native Ctrl+Enter instruction and resize affordance from
-# TürkDet's main text input. A tiny same-origin iframe observes the textarea in
-# the parent document and updates the presentation-only document counters while
-# the user types. Detector inference remains an explicit button action.
+# TürkDet's main text input. Streamlit 1.64 can execute trusted JavaScript via
+# st.html directly in the app DOM, so the lightweight document counters can be
+# updated on each browser input event without rerunning detector inference.
 if not getattr(st.text_area, "_turkdet_text_area", False):
     _streamlit_text_area = st.text_area
 
@@ -47,15 +46,14 @@ if not getattr(st.text_area, "_turkdet_text_area", False):
                 unsafe_allow_html=True,
             )
 
-            components.html(
+            st.html(
                 """
                 <script>
                 (() => {
-                  const doc = window.parent.document;
                   let attachedTextarea = null;
 
                   const setStat = (id, value) => {
-                    const node = doc.getElementById(id);
+                    const node = document.getElementById(id);
                     if (node) node.textContent = Number(value).toLocaleString('tr-TR');
                   };
 
@@ -84,7 +82,7 @@ if not getattr(st.text_area, "_turkdet_text_area", False):
                   };
 
                   const updateSummary = () => {
-                    const textarea = doc.querySelector(
+                    const textarea = document.querySelector(
                       'div[class*="st-key-pasted_text_widget"] textarea, div[data-testid="stTextArea"] textarea'
                     );
                     if (!textarea) return;
@@ -97,28 +95,28 @@ if not getattr(st.text_area, "_turkdet_text_area", False):
                   };
 
                   const attach = () => {
-                    const textarea = doc.querySelector(
+                    const textarea = document.querySelector(
                       'div[class*="st-key-pasted_text_widget"] textarea, div[data-testid="stTextArea"] textarea'
                     );
                     if (!textarea) return;
 
                     if (textarea !== attachedTextarea) {
+                      if (attachedTextarea) {
+                        attachedTextarea.removeEventListener('input', updateSummary);
+                      }
                       attachedTextarea = textarea;
                       textarea.addEventListener('input', updateSummary, { passive: true });
-                      textarea.addEventListener('paste', () => requestAnimationFrame(updateSummary), { passive: true });
-                      textarea.addEventListener('cut', () => requestAnimationFrame(updateSummary), { passive: true });
                     }
                     updateSummary();
                   };
 
                   attach();
                   const observer = new MutationObserver(attach);
-                  observer.observe(doc.body, { childList: true, subtree: true });
+                  observer.observe(document.body, { childList: true, subtree: true });
                 })();
                 </script>
                 """,
-                height=0,
-                width=0,
+                unsafe_allow_javascript=True,
             )
 
         return value
