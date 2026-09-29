@@ -74,16 +74,21 @@ def _selected_document_size() -> int:
     )
 
 
+def _selected_document_data() -> bytes:
+    data = st.session_state.get("selected_document_data", b"")
+    if not isinstance(data, (bytes, bytearray)) or not data:
+        data = st.session_state.get("uploaded_data_buffer", b"")
+    return bytes(data) if isinstance(data, (bytes, bytearray)) else b""
+
+
 def _buffered_uploaded_document() -> _UploadedDocumentAdapter | None:
     """Return the last selected document when the uploader is remounted."""
 
     name = _selected_document_name()
-    data = st.session_state.get("selected_document_data", b"")
-    if not isinstance(data, (bytes, bytearray)) or not data:
-        data = st.session_state.get("uploaded_data_buffer", b"")
-    if not name or not isinstance(data, (bytes, bytearray)) or not data:
+    data = _selected_document_data()
+    if not name or not data:
         return None
-    return _UploadedDocumentAdapter(name, bytes(data))
+    return _UploadedDocumentAdapter(name, data)
 
 
 def _clear_uploaded_document_state() -> None:
@@ -102,6 +107,30 @@ def _clear_uploaded_document_state() -> None:
     st.session_state["selected_document_size"] = 0
     st.session_state["selected_document_data"] = b""
     st.session_state["selected_document_mime"] = ""
+
+
+def _selection_matches_event(name: str, data: bytes) -> bool:
+    """Return True when browser and Python already point to the same file."""
+
+    return _selected_document_name() == name and _selected_document_data() == data
+
+
+def _persist_selected_document(*, name: str, data: bytes, size: int, mime_type: str) -> None:
+    """Atomically replace all document metadata for a newly selected file."""
+
+    st.session_state["selected_document_name"] = name
+    st.session_state["selected_document_size"] = size
+    st.session_state["selected_document_data"] = data
+    st.session_state["selected_document_mime"] = mime_type
+
+    # Mirror metadata for the existing application flow. Reset parsed text so
+    # no success message or analysis from the previous document can survive the
+    # document replacement render.
+    st.session_state["uploaded_name_buffer"] = name
+    st.session_state["uploaded_size_buffer"] = size
+    st.session_state["uploaded_data_buffer"] = data
+    st.session_state["uploaded_mime_buffer"] = mime_type
+    st.session_state["uploaded_text_buffer"] = ""
 
 
 def _install_document_uploader_override() -> None:
@@ -131,29 +160,32 @@ def _install_document_uploader_override() -> None:
             return _buffered_uploaded_document()
 
         if event.kind == "cleared":
+            had_selection = bool(_selected_document_name() or _selected_document_data())
             _clear_uploaded_document_state()
+            if had_selection:
+                st.rerun()
             return None
 
         if event.kind == "error":
             st.error(event.message)
             return _buffered_uploaded_document()
 
-        # Persist the file selection independently from text extraction. A
-        # parser failure (for example a scanned PDF without a text layer) may
-        # clear uploaded_text_buffer, but must never clear this selection state.
-        st.session_state["selected_document_name"] = event.name
-        st.session_state["selected_document_size"] = event.size
-        st.session_state["selected_document_data"] = event.data
-        st.session_state["selected_document_mime"] = event.mime_type
+        # The component renders before Python can persist the newly returned
+        # event. Without one synchronization rerun, the browser can briefly be
+        # given the previous file metadata while streamlit_app.py still parses
+        # the previous adapter. Persist first, rerun once, then parse only when
+        # both sides point to the same document.
+        event_data = bytes(event.data)
+        if not _selection_matches_event(event.name, event_data):
+            _persist_selected_document(
+                name=event.name,
+                data=event_data,
+                size=event.size,
+                mime_type=event.mime_type,
+            )
+            st.rerun()
 
-        # Mirror metadata for the existing app flow. These keys may be changed
-        # by parsing logic without affecting the durable selection above.
-        st.session_state["uploaded_name_buffer"] = event.name
-        st.session_state["uploaded_size_buffer"] = event.size
-        st.session_state["uploaded_data_buffer"] = event.data
-        st.session_state["uploaded_mime_buffer"] = event.mime_type
-        st.session_state["uploaded_text_buffer"] = ""
-        return _UploadedDocumentAdapter(event.name, event.data)
+        return _UploadedDocumentAdapter(event.name, event_data)
 
     # The second marker intentionally prevents app/__init__.py from installing
     # the old CSS-heavy native uploader wrapper after this override is active.
