@@ -18,6 +18,38 @@ if not getattr(st.button, "_turkdet_button", False):
     st.button = _turkdet_button
 
 
+# Hide Streamlit's native Ctrl+Enter instruction and resize affordance from
+# TürkDet's main text input. The analysis action remains the explicit button.
+if not getattr(st.text_area, "_turkdet_text_area", False):
+    _streamlit_text_area = st.text_area
+
+    def _turkdet_text_area(*args, **kwargs):
+        value = _streamlit_text_area(*args, **kwargs)
+
+        if kwargs.get("key") == "pasted_text_widget":
+            st.markdown(
+                """
+                <style>
+                  div[data-testid="stTextArea"] [data-testid="InputInstructions"],
+                  div[data-testid="stTextArea"] small {
+                    display:none !important;
+                    visibility:hidden !important;
+                  }
+
+                  div[data-testid="stTextArea"] textarea {
+                    resize:none !important;
+                  }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        return value
+
+    _turkdet_text_area._turkdet_text_area = True
+    st.text_area = _turkdet_text_area
+
+
 # Streamlit's segmented-control internals inherit colors from the configured
 # base theme. TürkDet changes theme at runtime, so style the source selector
 # through its stable widget key instead of Streamlit's internal test IDs.
