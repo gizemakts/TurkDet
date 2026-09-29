@@ -74,6 +74,7 @@ if is_dark:
     MUTED = "#9CA6B5"
     BORDER = "rgba(255,255,255,.12)"
     SOFT = "rgba(255,255,255,.045)"
+    TOGGLE_TRACK = "linear-gradient(135deg,#202636,#262D40)"
 else:
     BG = "#FFFFFF"
     SURFACE = "#F6F7FB"
@@ -82,9 +83,14 @@ else:
     MUTED = "#667085"
     BORDER = "rgba(15,23,42,.14)"
     SOFT = "rgba(15,23,42,.035)"
+    TOGGLE_TRACK = "linear-gradient(135deg,#DBEAFE,#E0E7FF)"
 
-theme_icon = "☀️" if is_dark else "🌙"
+# The thumb shows the active theme; the opposite icon remains visible on the track.
+theme_icon = "🌙" if is_dark else "☀️"
+theme_other_icon = "☀️" if is_dark else "🌙"
 theme_help = "Açık temaya geç" if is_dark else "Koyu temaya geç"
+theme_thumb_offset = "36px" if is_dark else "0px"
+theme_other_side = "left:9px;" if is_dark else "right:9px;"
 
 st.markdown(
     f"""
@@ -94,8 +100,8 @@ st.markdown(
       [data-testid="stDecoration"],
       #MainMenu,
       footer {{
-        display: none !important;
-        visibility: hidden !important;
+        display:none !important;
+        visibility:hidden !important;
       }}
 
       .stApp {{
@@ -111,7 +117,6 @@ st.markdown(
         background:{BG} !important;
         color:{TEXT} !important;
       }}
-
       .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5,
       .stApp p, .stApp label,
       .stApp [data-testid="stMarkdownContainer"] {{
@@ -163,27 +168,61 @@ st.markdown(
         margin:.2rem 0 1.5rem;
       }}
 
+      /* Compact sun/moon sliding theme switch. */
       div[class*="st-key-theme_toggle"] {{
         display:flex;
         justify-content:flex-end;
-        padding-top:.28rem;
+        padding-top:.35rem;
       }}
       div[class*="st-key-theme_toggle"] button {{
-        width:42px !important;
-        min-width:42px !important;
-        height:42px !important;
-        min-height:42px !important;
+        position:relative !important;
+        width:72px !important;
+        min-width:72px !important;
+        height:36px !important;
+        min-height:36px !important;
         padding:0 !important;
-        border-radius:12px !important;
+        overflow:hidden !important;
+        border-radius:999px !important;
         border:1px solid {BORDER} !important;
-        background:{SURFACE} !important;
-        color:{TEXT} !important;
-        font-size:1.05rem !important;
-        box-shadow:none !important;
+        background:{TOGGLE_TRACK} !important;
+        box-shadow:inset 0 0 0 1px rgba(99,102,241,.08) !important;
+        transition:background .22s ease, border-color .22s ease, box-shadow .22s ease !important;
       }}
       div[class*="st-key-theme_toggle"] button:hover {{
         border-color:rgba(99,102,241,.7) !important;
-        background:rgba(99,102,241,.10) !important;
+        box-shadow:0 0 0 3px rgba(99,102,241,.10) !important;
+      }}
+      div[class*="st-key-theme_toggle"] button::before {{
+        content:"{theme_other_icon}";
+        position:absolute;
+        top:50%;
+        {theme_other_side}
+        transform:translateY(-50%);
+        font-size:14px;
+        line-height:1;
+        opacity:.68;
+        z-index:1;
+      }}
+      div[class*="st-key-theme_toggle"] button p {{
+        position:absolute !important;
+        top:2px !important;
+        left:2px !important;
+        z-index:2 !important;
+        width:30px !important;
+        height:30px !important;
+        margin:0 !important;
+        padding:0 !important;
+        border-radius:50% !important;
+        display:flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        background:#F8FAFC !important;
+        color:#111827 !important;
+        font-size:14px !important;
+        line-height:1 !important;
+        box-shadow:0 2px 7px rgba(0,0,0,.24) !important;
+        transform:translateX({theme_thumb_offset}) !important;
+        transition:transform .22s cubic-bezier(.4,0,.2,1), box-shadow .22s ease !important;
       }}
 
       .td-kicker {{
@@ -319,7 +358,6 @@ st.markdown(
         font-size:.78rem;
         color:{MUTED};
       }}
-
       div[data-testid="stFileUploader"] section button {{
         position:relative;
         color:transparent !important;
@@ -369,9 +407,7 @@ st.markdown(
         cursor:not-allowed;
       }}
 
-      div[data-testid="stSegmentedControl"] {{
-        margin-bottom:.35rem;
-      }}
+      div[data-testid="stSegmentedControl"] {{margin-bottom:.35rem;}}
       div[data-testid="stSegmentedControl"] button {{
         font-weight:680;
         color:{TEXT} !important;
@@ -383,7 +419,6 @@ st.markdown(
         border-radius:12px;
         padding:.65rem .8rem;
       }}
-
       details[data-testid="stExpander"] {{
         background:{SURFACE};
         border-color:{BORDER} !important;
@@ -394,6 +429,10 @@ st.markdown(
         .td-subtitle {{display:none;}}
         .td-mark {{width:38px; height:38px;}}
         .td-brand {{font-size:1.55rem;}}
+        div[class*="st-key-theme_toggle"] button {{
+          width:68px !important;
+          min-width:68px !important;
+        }}
       }}
     </style>
     """,
