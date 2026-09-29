@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+    body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    textarea {
+      display: block;
+      width: 100%;
+      min-width: 100%;
+      max-width: 100%;
+      resize: none;
+      border-radius: 16px;
+      padding: 16px 17px;
+      font: 400 14px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--field, #101826);
+      color: var(--text, #F4F7FB);
+      border: 1px solid var(--border, rgba(255,255,255,.16));
+      outline: none;
+      box-shadow: var(--shadow, 0 8px 24px rgba(0,0,0,.14));
+      transition: border-color .16s ease, box-shadow .16s ease;
+    }
+    textarea::placeholder { color: var(--muted, #97A3B6); opacity: .78; }
+    textarea:focus {
+      border-color: rgba(99,102,241,.78);
+      box-shadow: 0 0 0 3px rgba(99,102,241,.10), var(--shadow, 0 8px 24px rgba(0,0,0,.14));
+    }
+  </style>
+</head>
+<body>
+  <textarea id="editor" spellcheck="true" aria-label="Türkçe metin"></textarea>
+
+  <script>
+    const SET_COMPONENT_VALUE = "streamlit:setComponentValue";
+    const RENDER = "streamlit:render";
+    const COMPONENT_READY = "streamlit:componentReady";
+    const SET_FRAME_HEIGHT = "streamlit:setFrameHeight";
+
+    const editor = document.getElementById("editor");
+    let debounceTimer = null;
+    let debounceMs = 180;
+
+    function sendMessage(type, data) {
+      window.parent.postMessage(Object.assign({
+        isStreamlitMessage: true,
+        type: type,
+      }, data || {}), "*");
+    }
+
+    function setFrameHeight(height) {
+      sendMessage(SET_FRAME_HEIGHT, { height: height });
+    }
+
+    function setComponentValue(value) {
+      sendMessage(SET_COMPONENT_VALUE, { value: value, dataType: "json" });
+    }
+
+    function applyProps(props) {
+      const nextValue = typeof props.value === "string" ? props.value : "";
+      const active = document.activeElement === editor;
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+
+      if (editor.value !== nextValue) {
+        editor.value = nextValue;
+        if (active) {
+          const safeStart = Math.min(start ?? nextValue.length, nextValue.length);
+          const safeEnd = Math.min(end ?? nextValue.length, nextValue.length);
+          requestAnimationFrame(() => {
+            editor.focus();
+            editor.setSelectionRange(safeStart, safeEnd);
+          });
+        }
+      }
+
+      editor.placeholder = props.placeholder || "";
+      debounceMs = Number.isFinite(Number(props.debounce_ms)) ? Number(props.debounce_ms) : 180;
+
+      const height = Math.max(120, Number(props.height) || 300);
+      editor.style.height = `${height}px`;
+      document.documentElement.style.setProperty("--field", props.field_color || "#101826");
+      document.documentElement.style.setProperty("--text", props.text_color || "#F4F7FB");
+      document.documentElement.style.setProperty("--muted", props.muted_color || "#97A3B6");
+      document.documentElement.style.setProperty("--border", props.border_color || "rgba(255,255,255,.16)");
+      document.documentElement.style.setProperty("--shadow", props.shadow || "0 8px 24px rgba(0,0,0,.14)");
+      setFrameHeight(height + 2);
+    }
+
+    window.addEventListener("message", (event) => {
+      if (event.data && event.data.type === RENDER) {
+        applyProps(event.data.args || {});
+      }
+    });
+
+    editor.addEventListener("input", () => {
+      window.clearTimeout(debounceTimer);
+      debounceTimer = window.setTimeout(() => {
+        setComponentValue(editor.value);
+      }, debounceMs);
+    });
+
+    editor.addEventListener("blur", () => {
+      window.clearTimeout(debounceTimer);
+      setComponentValue(editor.value);
+    });
+
+    sendMessage(COMPONENT_READY, { apiVersion: 1 });
+    setFrameHeight(302);
+  </script>
+</body>
+</html>
