@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 # Remove the native hover tooltip from TürkDet's icon-only theme switch.
@@ -19,7 +20,9 @@ if not getattr(st.button, "_turkdet_button", False):
 
 
 # Hide Streamlit's native Ctrl+Enter instruction and resize affordance from
-# TürkDet's main text input, then replace it with a compact branded hint.
+# TürkDet's main text input. A tiny same-origin iframe observes the textarea in
+# the parent document and updates the presentation-only document counters while
+# the user types. Detector inference remains an explicit button action.
 if not getattr(st.text_area, "_turkdet_text_area", False):
     _streamlit_text_area = st.text_area
 
@@ -27,71 +30,95 @@ if not getattr(st.text_area, "_turkdet_text_area", False):
         value = _streamlit_text_area(*args, **kwargs)
 
         if kwargs.get("key") == "pasted_text_widget":
-            is_dark = st.session_state.get("theme_mode", "dark") == "dark"
-            hint_text = "#AAB4C5" if is_dark else "#667085"
-            hint_border = "rgba(255,255,255,.12)" if is_dark else "rgba(15,23,42,.10)"
-            hint_bg = "rgba(255,255,255,.045)" if is_dark else "rgba(255,255,255,.72)"
-            key_bg = "rgba(99,102,241,.16)" if is_dark else "rgba(99,102,241,.09)"
-            key_border = "rgba(99,102,241,.32)" if is_dark else "rgba(99,102,241,.22)"
-            key_text = "#C7D2FE" if is_dark else "#4F46E5"
-
             st.markdown(
-                f"""
+                """
                 <style>
                   div[data-testid="stTextArea"] [data-testid="InputInstructions"],
-                  div[data-testid="stTextArea"] small {{
+                  div[data-testid="stTextArea"] small {
                     display:none !important;
                     visibility:hidden !important;
-                  }}
+                  }
 
-                  div[data-testid="stTextArea"] textarea {{
+                  div[data-testid="stTextArea"] textarea {
                     resize:none !important;
-                  }}
-
-                  .td-input-shortcut {{
-                    display:flex;
-                    justify-content:flex-end;
-                    align-items:center;
-                    gap:.42rem;
-                    margin-top:.42rem;
-                    color:{hint_text};
-                    font-size:.74rem;
-                    line-height:1;
-                    user-select:none;
-                  }}
-
-                  .td-input-shortcut .td-shortcut-pill {{
-                    display:inline-flex;
-                    align-items:center;
-                    gap:.28rem;
-                    padding:.28rem .48rem;
-                    border:1px solid {hint_border};
-                    border-radius:999px;
-                    background:{hint_bg};
-                    box-shadow:0 4px 14px rgba(0,0,0,.035);
-                  }}
-
-                  .td-input-shortcut kbd {{
-                    display:inline-flex;
-                    align-items:center;
-                    min-height:20px;
-                    padding:0 .38rem;
-                    border-radius:6px;
-                    border:1px solid {key_border};
-                    background:{key_bg};
-                    color:{key_text};
-                    font:700 .69rem/1.1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-                    box-shadow:none;
-                  }}
+                  }
                 </style>
-                <div class="td-input-shortcut">
-                  <div class="td-shortcut-pill">
-                    <kbd>Ctrl</kbd><span>+</span><kbd>Enter</kbd>
-                    <span>Belge özetini güncelle</span>
-                  </div>
-                </div>
                 """,
                 unsafe_allow_html=True,
+            )
+
+            components.html(
+                """
+                <script>
+                (() => {
+                  const doc = window.parent.document;
+                  let attachedTextarea = null;
+
+                  const setStat = (id, value) => {
+                    const node = doc.getElementById(id);
+                    if (node) node.textContent = Number(value).toLocaleString('tr-TR');
+                  };
+
+                  const computeStats = (rawValue) => {
+                    const cleaned = (rawValue || '').trim();
+                    if (!cleaned) {
+                      return { words: 0, paragraphs: 0, sentences: 0, characters: 0 };
+                    }
+
+                    const words = (cleaned.match(/\S+/gu) || []).length;
+                    const normalized = cleaned.replace(/\r\n?/g, '\n');
+                    const paragraphs = normalized
+                      .split(/\n\s*\n+/u)
+                      .map((block) => block
+                        .split('\n')
+                        .map((line) => line.trim())
+                        .filter(Boolean)
+                        .join(' '))
+                      .filter(Boolean).length;
+
+                    const sentenceMarks = cleaned.match(/[.!?…]+(?=\s|$)/gu) || [];
+                    const sentences = sentenceMarks.length || 1;
+                    const characters = [...cleaned].length;
+
+                    return { words, paragraphs, sentences, characters };
+                  };
+
+                  const updateSummary = () => {
+                    const textarea = doc.querySelector(
+                      'div[class*="st-key-pasted_text_widget"] textarea, div[data-testid="stTextArea"] textarea'
+                    );
+                    if (!textarea) return;
+
+                    const stats = computeStats(textarea.value);
+                    setStat('td-stat-words', stats.words);
+                    setStat('td-stat-paragraphs', stats.paragraphs);
+                    setStat('td-stat-sentences', stats.sentences);
+                    setStat('td-stat-characters', stats.characters);
+                  };
+
+                  const attach = () => {
+                    const textarea = doc.querySelector(
+                      'div[class*="st-key-pasted_text_widget"] textarea, div[data-testid="stTextArea"] textarea'
+                    );
+                    if (!textarea) return;
+
+                    if (textarea !== attachedTextarea) {
+                      attachedTextarea = textarea;
+                      textarea.addEventListener('input', updateSummary, { passive: true });
+                      textarea.addEventListener('paste', () => requestAnimationFrame(updateSummary), { passive: true });
+                      textarea.addEventListener('cut', () => requestAnimationFrame(updateSummary), { passive: true });
+                    }
+                    updateSummary();
+                  };
+
+                  attach();
+                  const observer = new MutationObserver(attach);
+                  observer.observe(doc.body, { childList: true, subtree: true });
+                })();
+                </script>
+                """,
+                height=0,
+                width=0,
             )
 
         return value
