@@ -5,85 +5,126 @@ from __future__ import annotations
 import streamlit as st
 
 
-# Streamlit's segmented-control internals inherit parts of the configured base
-# theme. TürkDet switches themes at runtime, so we restyle the two source
-# segments from the widget's actual selected value instead of relying on
-# Streamlit's native light/dark state selectors.
+# Remove the native hover tooltip from TürkDet's icon-only theme switch.
+if not getattr(st.button, "_turkdet_button", False):
+    _streamlit_button = st.button
+
+    def _turkdet_button(label, *args, **kwargs):
+        if kwargs.get("key") == "theme_toggle":
+            kwargs["help"] = None
+        return _streamlit_button(label, *args, **kwargs)
+
+    _turkdet_button._turkdet_button = True
+    st.button = _turkdet_button
+
+
+# Streamlit's segmented-control internals inherit colors from the configured
+# base theme. TürkDet changes theme at runtime, so style the source selector
+# through its stable widget key instead of Streamlit's internal test IDs.
 if hasattr(st, "segmented_control") and not getattr(st.segmented_control, "_turkdet_themed", False):
     _streamlit_segmented_control = st.segmented_control
 
     def _turkdet_segmented_control(*args, **kwargs):
         selected = _streamlit_segmented_control(*args, **kwargs)
 
+        key = kwargs.get("key")
+        if key != "input_mode":
+            return selected
+
         is_dark = st.session_state.get("theme_mode", "dark") == "dark"
         first_selected = selected != "Belge yükle"
 
         if is_dark:
             track = "#0F1622"
-            inactive_bg = "transparent"
+            inactive_bg = "#0F1622"
             inactive_text = "#97A3B6"
-            hover_bg = "rgba(255,255,255,.055)"
-            selected_bg = "rgba(99,102,241,.18)"
+            hover_bg = "#151D2A"
+            selected_bg = "#171B4A"
             selected_text = "#F4F7FB"
-            border = "rgba(255,255,255,.105)"
-            selected_border = "rgba(99,102,241,.52)"
+            border = "rgba(255,255,255,.12)"
+            selected_border = "rgba(99,102,241,.78)"
         else:
             track = "#EEF1F7"
-            inactive_bg = "transparent"
+            inactive_bg = "#EEF1F7"
             inactive_text = "#667085"
-            hover_bg = "rgba(15,23,42,.045)"
+            hover_bg = "#E7EAF2"
             selected_bg = "#FFFFFF"
             selected_text = "#111827"
-            border = "rgba(15,23,42,.105)"
-            selected_border = "rgba(99,102,241,.48)"
+            border = "rgba(15,23,42,.12)"
+            selected_border = "rgba(99,102,241,.72)"
 
         first_bg = selected_bg if first_selected else inactive_bg
         first_text = selected_text if first_selected else inactive_text
         first_border = selected_border if first_selected else "transparent"
+        first_hover_bg = first_bg if first_selected else hover_bg
+        first_hover_text = first_text if first_selected else selected_text
+
         second_bg = inactive_bg if first_selected else selected_bg
         second_text = inactive_text if first_selected else selected_text
         second_border = "transparent" if first_selected else selected_border
+        second_hover_bg = hover_bg if first_selected else second_bg
+        second_hover_text = selected_text if first_selected else second_text
 
         st.markdown(
             f"""
             <style>
-              div[data-testid="stSegmentedControl"] div[role="group"] {{
+              div[class*="st-key-input_mode"] div[role="group"] {{
                 background:{track} !important;
+                background-color:{track} !important;
                 border:1px solid {border} !important;
+                border-radius:12px !important;
+                overflow:hidden !important;
               }}
 
-              div[data-testid="stSegmentedControl"] button,
-              div[data-testid="stSegmentedControl"] button:hover,
-              div[data-testid="stSegmentedControl"] button:focus,
-              div[data-testid="stSegmentedControl"] button:active {{
+              div[class*="st-key-input_mode"] button {{
+                background-image:none !important;
                 box-shadow:none !important;
                 outline:none !important;
+                transition:background-color .15s ease,color .15s ease,border-color .15s ease !important;
               }}
 
-              div[data-testid="stSegmentedControl"] button:first-of-type {{
+              div[class*="st-key-input_mode"] button:first-of-type,
+              div[class*="st-key-input_mode"] button:first-of-type:focus,
+              div[class*="st-key-input_mode"] button:first-of-type:active {{
                 background:{first_bg} !important;
+                background-color:{first_bg} !important;
                 color:{first_text} !important;
+                -webkit-text-fill-color:{first_text} !important;
                 border:1px solid {first_border} !important;
               }}
-              div[data-testid="stSegmentedControl"] button:last-of-type {{
+
+              div[class*="st-key-input_mode"] button:last-of-type,
+              div[class*="st-key-input_mode"] button:last-of-type:focus,
+              div[class*="st-key-input_mode"] button:last-of-type:active {{
                 background:{second_bg} !important;
+                background-color:{second_bg} !important;
                 color:{second_text} !important;
+                -webkit-text-fill-color:{second_text} !important;
                 border:1px solid {second_border} !important;
               }}
 
-              div[data-testid="stSegmentedControl"] button:first-of-type *,
-              div[data-testid="stSegmentedControl"] button:last-of-type * {{
-                background:transparent !important;
-                color:inherit !important;
+              div[class*="st-key-input_mode"] button:first-of-type:hover {{
+                background:{first_hover_bg} !important;
+                background-color:{first_hover_bg} !important;
+                color:{first_hover_text} !important;
+                -webkit-text-fill-color:{first_hover_text} !important;
               }}
 
-              div[data-testid="stSegmentedControl"] button:first-of-type:hover {{
-                background:{first_bg if first_selected else hover_bg} !important;
-                color:{selected_text if not first_selected else first_text} !important;
+              div[class*="st-key-input_mode"] button:last-of-type:hover {{
+                background:{second_hover_bg} !important;
+                background-color:{second_hover_bg} !important;
+                color:{second_hover_text} !important;
+                -webkit-text-fill-color:{second_hover_text} !important;
               }}
-              div[data-testid="stSegmentedControl"] button:last-of-type:hover {{
-                background:{hover_bg if first_selected else second_bg} !important;
-                color:{selected_text if first_selected else second_text} !important;
+
+              div[class*="st-key-input_mode"] button > div,
+              div[class*="st-key-input_mode"] button div,
+              div[class*="st-key-input_mode"] button p,
+              div[class*="st-key-input_mode"] button span {{
+                background:transparent !important;
+                background-color:transparent !important;
+                color:inherit !important;
+                -webkit-text-fill-color:inherit !important;
               }}
             </style>
             """,
