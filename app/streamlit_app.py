@@ -13,7 +13,6 @@ from app.inference import InferenceUnavailableError, predict_text
 MIN_WORDS = 30  # Temporary UI guard; not a validated scientific threshold.
 ACCENT = "#6366F1"
 
-
 st.set_page_config(
     page_title="TürkDet",
     page_icon="🔎",
@@ -21,21 +20,21 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-
-# ---------------------------------------------------------------------------
-# Persistent input state
-# ---------------------------------------------------------------------------
 st.session_state.setdefault("pasted_text_buffer", "")
 st.session_state.setdefault("uploaded_text_buffer", "")
 st.session_state.setdefault("uploaded_name_buffer", "")
+st.session_state.setdefault("theme_mode", "dark")
 
 
 def _sync_pasted_text() -> None:
     st.session_state["pasted_text_buffer"] = st.session_state.get("pasted_text_widget", "")
 
 
+def _toggle_theme() -> None:
+    st.session_state["theme_mode"] = "light" if st.session_state["theme_mode"] == "dark" else "dark"
+
+
 def _safe_result_message(label: str) -> str:
-    """Translate a binary backend label into cautious user-facing language."""
     normalized = str(label).strip().upper().replace(" ", "_")
     if normalized in {"HUMAN", "İNSAN", "INSAN", "0"}:
         return "Belirgin yapay zekâ izi saptanmadı"
@@ -43,6 +42,49 @@ def _safe_result_message(label: str) -> str:
         return "Yapay zekâ üretimiyle uyumlu sinyal saptandı"
     return "Model çıktısı hazır"
 
+
+def _render_document(paragraphs: list[str], caption: str) -> None:
+    st.markdown("### Belge görünümü")
+    st.caption(caption)
+    st.markdown('<div class="td-doc">', unsafe_allow_html=True)
+    if paragraphs:
+        for index, paragraph in enumerate(paragraphs[:30], start=1):
+            safe_paragraph = escape(paragraph)
+            st.markdown(
+                f"""
+                <div class="td-paragraph">
+                  <div class="td-paragraph-head">PARAGRAF {index} · AI SKORU —</div>
+                  <div>{safe_paragraph}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    else:
+        st.info("Belgede gösterilecek paragraf bulunamadı.")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+is_dark = st.session_state["theme_mode"] == "dark"
+
+if is_dark:
+    BG = "#0E1117"
+    SURFACE = "#151A23"
+    FIELD = "#111827"
+    TEXT = "#F7F8FA"
+    MUTED = "#9CA6B5"
+    BORDER = "rgba(255,255,255,.12)"
+    SOFT = "rgba(255,255,255,.045)"
+else:
+    BG = "#FFFFFF"
+    SURFACE = "#F6F7FB"
+    FIELD = "#FFFFFF"
+    TEXT = "#111827"
+    MUTED = "#667085"
+    BORDER = "rgba(15,23,42,.14)"
+    SOFT = "rgba(15,23,42,.035)"
+
+theme_icon = "☀️" if is_dark else "🌙"
+theme_help = "Açık temaya geç" if is_dark else "Koyu temaya geç"
 
 st.markdown(
     f"""
@@ -56,21 +98,41 @@ st.markdown(
         visibility: hidden !important;
       }}
 
-      .block-container {{
-        max-width: 1180px;
-        padding-top: 2rem;
-        padding-bottom: 3rem;
+      .stApp {{
+        --background-color:{BG};
+        --secondary-background-color:{SURFACE};
+        --text-color:{TEXT};
+        --primary-color:{ACCENT};
+        background:{BG} !important;
+        color:{TEXT} !important;
+      }}
+      [data-testid="stAppViewContainer"],
+      [data-testid="stMain"] {{
+        background:{BG} !important;
+        color:{TEXT} !important;
       }}
 
-      .td-header {{
+      .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5,
+      .stApp p, .stApp label,
+      .stApp [data-testid="stMarkdownContainer"] {{
+        color:{TEXT};
+      }}
+      .stApp [data-testid="stCaptionContainer"] {{
+        color:{MUTED} !important;
+      }}
+
+      .block-container {{
+        max-width:1180px;
+        padding-top:1.8rem;
+        padding-bottom:3rem;
+      }}
+
+      .td-brand-wrap {{
         display:flex;
         align-items:center;
-        gap:1rem;
-        padding:.35rem 0 1.25rem;
-        margin-bottom:1.5rem;
-        border-bottom:1px solid rgba(128,128,128,.16);
+        gap:.8rem;
+        padding:.25rem 0 .8rem;
       }}
-      .td-brand-wrap {{display:flex; align-items:center; gap:.8rem;}}
       .td-mark {{
         width:42px;
         height:42px;
@@ -81,8 +143,8 @@ st.markdown(
         font-weight:800;
         font-size:1.02rem;
         letter-spacing:-.04em;
-        border:1px solid rgba(128,128,128,.22);
-        background:rgba(128,128,128,.07);
+        border:1px solid {BORDER};
+        background:{SOFT};
       }}
       .td-brand {{
         font-size:1.72rem;
@@ -90,18 +152,50 @@ st.markdown(
         letter-spacing:-.045em;
         line-height:1;
       }}
-      .td-subtitle {{opacity:.58; margin-top:.27rem; font-size:.88rem;}}
+      .td-subtitle {{
+        color:{MUTED};
+        margin-top:.27rem;
+        font-size:.88rem;
+      }}
+      .td-header-rule {{
+        height:1px;
+        background:{BORDER};
+        margin:.2rem 0 1.5rem;
+      }}
+
+      div[class*="st-key-theme_toggle"] {{
+        display:flex;
+        justify-content:flex-end;
+        padding-top:.28rem;
+      }}
+      div[class*="st-key-theme_toggle"] button {{
+        width:42px !important;
+        min-width:42px !important;
+        height:42px !important;
+        min-height:42px !important;
+        padding:0 !important;
+        border-radius:12px !important;
+        border:1px solid {BORDER} !important;
+        background:{SURFACE} !important;
+        color:{TEXT} !important;
+        font-size:1.05rem !important;
+        box-shadow:none !important;
+      }}
+      div[class*="st-key-theme_toggle"] button:hover {{
+        border-color:rgba(99,102,241,.7) !important;
+        background:rgba(99,102,241,.10) !important;
+      }}
 
       .td-kicker {{
         font-size:.76rem;
         font-weight:750;
         letter-spacing:.09em;
         text-transform:uppercase;
-        opacity:.50;
+        color:{MUTED};
         margin-bottom:.45rem;
       }}
       .td-lead {{
-        opacity:.70;
+        color:{MUTED};
         max-width:760px;
         margin-bottom:1.1rem;
         line-height:1.55;
@@ -109,16 +203,16 @@ st.markdown(
       .td-upload-copy {{
         margin:.5rem 0 .75rem;
         font-size:.88rem;
-        opacity:.67;
+        color:{MUTED};
       }}
       .td-help {{
         margin:.35rem 0 1rem;
         font-size:.84rem;
-        opacity:.58;
+        color:{MUTED};
       }}
       .td-note {{
-        border:1px solid rgba(99,102,241,.28);
-        background:rgba(99,102,241,.07);
+        border:1px solid rgba(99,102,241,.30);
+        background:rgba(99,102,241,.08);
         border-radius:12px;
         padding:.8rem .95rem;
         margin:.85rem 0 1.15rem;
@@ -127,13 +221,13 @@ st.markdown(
       }}
 
       .td-score-card {{
-        border:1px solid rgba(128,128,128,.22);
+        border:1px solid {BORDER};
         border-radius:18px;
         padding:1.4rem 1.25rem;
-        background:rgba(128,128,128,.035);
+        background:{SURFACE};
       }}
       .td-ring {{
-        --score: 0;
+        --score:0;
         width:176px;
         height:176px;
         margin:0 auto 1.15rem;
@@ -148,7 +242,7 @@ st.markdown(
         width:138px;
         height:138px;
         border-radius:50%;
-        background:var(--background-color, #0e1117);
+        background:{BG};
         position:absolute;
       }}
       .td-ring-value {{
@@ -158,33 +252,43 @@ st.markdown(
         font-weight:800;
         letter-spacing:-.05em;
       }}
-      .td-ring-label {{text-align:center; font-weight:750; font-size:1rem;}}
-      .td-muted {{opacity:.62;}}
+      .td-ring-label {{
+        text-align:center;
+        font-weight:750;
+        font-size:1rem;
+      }}
+      .td-muted {{color:{MUTED};}}
       .td-center {{text-align:center;}}
 
       .td-doc {{
-        border:1px solid rgba(128,128,128,.20);
+        border:1px solid {BORDER};
         border-radius:16px;
-        background:rgba(128,128,128,.025);
+        background:{SURFACE};
         padding:1.05rem 1.15rem;
       }}
       .td-paragraph {{
         padding:.85rem .95rem;
         margin:.6rem 0;
         border-radius:10px;
-        background:rgba(128,128,128,.045);
-        border-left:3px solid rgba(128,128,128,.28);
+        background:{SOFT};
+        border-left:3px solid rgba(99,102,241,.42);
       }}
       .td-paragraph-head {{
         font-size:.76rem;
         font-weight:700;
-        opacity:.52;
+        color:{MUTED};
         margin-bottom:.35rem;
       }}
 
       div[data-testid="stTextArea"] textarea {{
         border-radius:14px;
         min-height:280px;
+        background:{FIELD} !important;
+        color:{TEXT} !important;
+        border-color:{BORDER} !important;
+      }}
+      div[data-testid="stTextArea"] textarea::placeholder {{
+        color:{MUTED} !important;
       }}
       div[data-testid="stTextArea"] textarea:focus {{
         border-color:{ACCENT} !important;
@@ -195,9 +299,9 @@ st.markdown(
         border-radius:14px;
         padding-top:1rem;
         padding-bottom:1rem;
+        background:{SURFACE} !important;
+        border-color:{BORDER} !important;
       }}
-
-      /* Replace Streamlit's English uploader helper text with Turkish copy. */
       div[data-testid="stFileUploaderDropzoneInstructions"] > div {{
         display:none !important;
       }}
@@ -206,25 +310,26 @@ st.markdown(
         display:block;
         font-size:.9rem;
         font-weight:650;
-        color:var(--text-color);
+        color:{TEXT};
         margin-bottom:.15rem;
       }}
       div[data-testid="stFileUploaderDropzoneInstructions"]::after {{
         content:"En fazla 10 MB • TXT, DOCX, PDF";
         display:block;
         font-size:.78rem;
-        opacity:.62;
+        color:{MUTED};
       }}
 
-      /* Localize and improve contrast of the browse button in both themes. */
       div[data-testid="stFileUploader"] section button {{
         position:relative;
         color:transparent !important;
         min-width:112px;
-        border-color:rgba(99,102,241,.55) !important;
-        background:rgba(99,102,241,.10) !important;
+        border-color:rgba(99,102,241,.60) !important;
+        background:rgba(99,102,241,.12) !important;
       }}
-      div[data-testid="stFileUploader"] section button > * {{display:none !important;}}
+      div[data-testid="stFileUploader"] section button > * {{
+        display:none !important;
+      }}
       div[data-testid="stFileUploader"] section button::after {{
         content:"Belge seç";
         position:absolute;
@@ -237,7 +342,7 @@ st.markdown(
         font-weight:750;
       }}
       div[data-testid="stFileUploader"] section button:hover {{
-        background:rgba(99,102,241,.16) !important;
+        background:rgba(99,102,241,.18) !important;
         border-color:{ACCENT} !important;
       }}
 
@@ -258,17 +363,34 @@ st.markdown(
       }}
       div[data-testid="stButton"] > button[kind="primary"]:disabled {{
         opacity:.72;
-        background:rgba(99,102,241,.07) !important;
+        background:rgba(99,102,241,.08) !important;
         border-color:rgba(99,102,241,.24) !important;
-        color:var(--text-color) !important;
+        color:{MUTED} !important;
         cursor:not-allowed;
       }}
 
-      div[data-testid="stSegmentedControl"] {{margin-bottom:.35rem;}}
-      div[data-testid="stSegmentedControl"] button {{font-weight:680;}}
+      div[data-testid="stSegmentedControl"] {{
+        margin-bottom:.35rem;
+      }}
+      div[data-testid="stSegmentedControl"] button {{
+        font-weight:680;
+        color:{TEXT} !important;
+      }}
 
-      @media (max-width: 700px) {{
-        .block-container {{padding-top:1.25rem;}}
+      [data-testid="stMetric"] {{
+        background:{SURFACE};
+        border:1px solid {BORDER};
+        border-radius:12px;
+        padding:.65rem .8rem;
+      }}
+
+      details[data-testid="stExpander"] {{
+        background:{SURFACE};
+        border-color:{BORDER} !important;
+      }}
+
+      @media (max-width:700px) {{
+        .block-container {{padding-top:1.15rem;}}
         .td-subtitle {{display:none;}}
         .td-mark {{width:38px; height:38px;}}
         .td-brand {{font-size:1.55rem;}}
@@ -278,20 +400,29 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.markdown(
-    """
-    <div class="td-header">
-      <div class="td-brand-wrap">
-        <div class="td-mark">TD</div>
-        <div>
-          <div class="td-brand">TürkDet</div>
-          <div class="td-subtitle">Türkçe Yapay Zekâ Metin Analizi</div>
+brand_col, theme_col = st.columns([12, 1])
+with brand_col:
+    st.markdown(
+        """
+        <div class="td-brand-wrap">
+          <div class="td-mark">TD</div>
+          <div>
+            <div class="td-brand">TürkDet</div>
+            <div class="td-subtitle">Türkçe Yapay Zekâ Metin Analizi</div>
+          </div>
         </div>
-      </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+        """,
+        unsafe_allow_html=True,
+    )
+with theme_col:
+    st.button(
+        theme_icon,
+        key="theme_toggle",
+        help=theme_help,
+        on_click=_toggle_theme,
+    )
+
+st.markdown('<div class="td-header-rule"></div>', unsafe_allow_html=True)
 
 st.markdown('<div class="td-kicker">Belge analizi</div>', unsafe_allow_html=True)
 st.markdown("## Türkçe metninizi analiz edin")
@@ -417,24 +548,10 @@ if analyze:
         left, right = st.columns([2.15, 1], gap="large")
 
         with left:
-            st.markdown("### Belge görünümü")
-            st.caption("Paragraf skorları, segment düzeyindeki doğrulama tamamlandığında burada gösterilecektir.")
-            st.markdown('<div class="td-doc">', unsafe_allow_html=True)
-            if paragraphs:
-                for index, paragraph in enumerate(paragraphs[:30], start=1):
-                    safe_paragraph = escape(paragraph)
-                    st.markdown(
-                        f"""
-                        <div class="td-paragraph">
-                          <div class="td-paragraph-head">PARAGRAF {index} · AI SKORU —</div>
-                          <div>{safe_paragraph}</div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-            else:
-                st.info("Belgede gösterilecek paragraf bulunamadı.")
-            st.markdown('</div>', unsafe_allow_html=True)
+            _render_document(
+                paragraphs,
+                "Paragraf skorları, segment düzeyindeki doğrulama tamamlandığında burada gösterilecektir.",
+            )
 
         with right:
             st.markdown("### Genel sonuç")
@@ -458,24 +575,10 @@ if analyze:
         left, right = st.columns([2.15, 1], gap="large")
 
         with left:
-            st.markdown("### Belge görünümü")
-            st.caption("Belge genel skorla birlikte incelenir. Paragraf skorları yalnızca ayrıca doğrulandığında açılır.")
-            st.markdown('<div class="td-doc">', unsafe_allow_html=True)
-            if paragraphs:
-                for index, paragraph in enumerate(paragraphs[:30], start=1):
-                    safe_paragraph = escape(paragraph)
-                    st.markdown(
-                        f"""
-                        <div class="td-paragraph">
-                          <div class="td-paragraph-head">PARAGRAF {index} · AI SKORU —</div>
-                          <div>{safe_paragraph}</div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-            else:
-                st.info("Belgede gösterilecek paragraf bulunamadı.")
-            st.markdown('</div>', unsafe_allow_html=True)
+            _render_document(
+                paragraphs,
+                "Belge genel skorla birlikte incelenir. Paragraf skorları yalnızca ayrıca doğrulandığında açılır.",
+            )
 
         with right:
             st.markdown("### Genel sonuç")
