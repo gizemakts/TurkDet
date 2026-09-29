@@ -58,11 +58,29 @@ def live_textarea(
     return value if result is None else str(result)
 
 
+def _selected_document_name() -> str:
+    return str(
+        st.session_state.get("selected_document_name", "")
+        or st.session_state.get("uploaded_name_buffer", "")
+        or ""
+    )
+
+
+def _selected_document_size() -> int:
+    return int(
+        st.session_state.get("selected_document_size", 0)
+        or st.session_state.get("uploaded_size_buffer", 0)
+        or 0
+    )
+
+
 def _buffered_uploaded_document() -> _UploadedDocumentAdapter | None:
     """Return the last selected document when the uploader is remounted."""
 
-    name = str(st.session_state.get("uploaded_name_buffer", "") or "")
-    data = st.session_state.get("uploaded_data_buffer", b"")
+    name = _selected_document_name()
+    data = st.session_state.get("selected_document_data", b"")
+    if not isinstance(data, (bytes, bytearray)) or not data:
+        data = st.session_state.get("uploaded_data_buffer", b"")
     if not name or not isinstance(data, (bytes, bytearray)) or not data:
         return None
     return _UploadedDocumentAdapter(name, bytes(data))
@@ -71,11 +89,19 @@ def _buffered_uploaded_document() -> _UploadedDocumentAdapter | None:
 def _clear_uploaded_document_state() -> None:
     """Clear document state only after an explicit remove action."""
 
+    # Parsed-text state used by streamlit_app.py.
     st.session_state["uploaded_text_buffer"] = ""
     st.session_state["uploaded_name_buffer"] = ""
     st.session_state["uploaded_size_buffer"] = 0
     st.session_state["uploaded_data_buffer"] = b""
     st.session_state["uploaded_mime_buffer"] = ""
+
+    # Selection state owned by the uploader itself. This is intentionally kept
+    # separate from parsed-text state so parser errors cannot discard a file.
+    st.session_state["selected_document_name"] = ""
+    st.session_state["selected_document_size"] = 0
+    st.session_state["selected_document_data"] = b""
+    st.session_state["selected_document_mime"] = ""
 
 
 def _install_document_uploader_override() -> None:
@@ -92,8 +118,8 @@ def _install_document_uploader_override() -> None:
 
         event = document_uploader(
             theme_mode=st.session_state.get("theme_mode", "dark"),
-            selected_name=str(st.session_state.get("uploaded_name_buffer", "") or ""),
-            selected_size=int(st.session_state.get("uploaded_size_buffer", 0) or 0),
+            selected_name=_selected_document_name(),
+            selected_size=_selected_document_size(),
             max_size_mb=10,
             key="turkdet_uploaded_document",
         )
@@ -112,8 +138,16 @@ def _install_document_uploader_override() -> None:
             st.error(event.message)
             return _buffered_uploaded_document()
 
-        # Persist the raw document before parsing. Parser failures (for example,
-        # scanned PDFs without a text layer) must not discard the user's file.
+        # Persist the file selection independently from text extraction. A
+        # parser failure (for example a scanned PDF without a text layer) may
+        # clear uploaded_text_buffer, but must never clear this selection state.
+        st.session_state["selected_document_name"] = event.name
+        st.session_state["selected_document_size"] = event.size
+        st.session_state["selected_document_data"] = event.data
+        st.session_state["selected_document_mime"] = event.mime_type
+
+        # Mirror metadata for the existing app flow. These keys may be changed
+        # by parsing logic without affecting the durable selection above.
         st.session_state["uploaded_name_buffer"] = event.name
         st.session_state["uploaded_size_buffer"] = event.size
         st.session_state["uploaded_data_buffer"] = event.data
