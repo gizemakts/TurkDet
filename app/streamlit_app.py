@@ -74,7 +74,7 @@ if is_dark:
     MUTED = "#9CA6B5"
     BORDER = "rgba(255,255,255,.12)"
     SOFT = "rgba(255,255,255,.045)"
-    TOGGLE_TRACK = "linear-gradient(135deg,#202636,#262D40)"
+    TOGGLE_TRACK = "linear-gradient(135deg,#1B2230,#252D40)"
 else:
     BG = "#FFFFFF"
     SURFACE = "#F6F7FB"
@@ -83,14 +83,25 @@ else:
     MUTED = "#667085"
     BORDER = "rgba(15,23,42,.14)"
     SOFT = "rgba(15,23,42,.035)"
-    TOGGLE_TRACK = "linear-gradient(135deg,#DBEAFE,#E0E7FF)"
+    TOGGLE_TRACK = "linear-gradient(135deg,#E8EEFF,#EEF2FF)"
 
-# The thumb shows the active theme; the opposite icon remains visible on the track.
-theme_icon = "🌙" if is_dark else "☀️"
-theme_other_icon = "☀️" if is_dark else "🌙"
+SUN_ICON = (
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' "
+    "viewBox='0 0 24 24' fill='none' stroke='%23F59E0B' stroke-width='2' stroke-linecap='round'%3E"
+    "%3Ccircle cx='12' cy='12' r='4'/%3E%3Cpath d='M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41"
+    "M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41'/%3E%3C/svg%3E"
+)
+MOON_ICON = (
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' "
+    "viewBox='0 0 24 24' fill='none' stroke='%236366F1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E"
+    "%3Cpath d='M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z'/%3E%3C/svg%3E"
+)
+
 theme_help = "Açık temaya geç" if is_dark else "Koyu temaya geç"
-theme_thumb_offset = "36px" if is_dark else "0px"
-theme_other_side = "left:9px;" if is_dark else "right:9px;"
+theme_thumb_offset = "32px" if is_dark else "0px"
+theme_active_icon = MOON_ICON if is_dark else SUN_ICON
+theme_passive_icon = SUN_ICON if is_dark else MOON_ICON
+theme_passive_side = "left:9px;" if is_dark else "right:9px;"
 
 st.markdown(
     f"""
@@ -168,39 +179,43 @@ st.markdown(
         margin:.2rem 0 1.5rem;
       }}
 
-      /* Compact sun/moon sliding theme switch. */
+      /* Premium vector sun/moon theme switch. */
       div[class*="st-key-theme_toggle"] {{
         display:flex;
         justify-content:flex-end;
-        padding-top:.35rem;
+        padding-top:.38rem;
       }}
       div[class*="st-key-theme_toggle"] button {{
         position:relative !important;
-        width:72px !important;
-        min-width:72px !important;
-        height:36px !important;
-        min-height:36px !important;
+        width:64px !important;
+        min-width:64px !important;
+        height:32px !important;
+        min-height:32px !important;
         padding:0 !important;
         overflow:hidden !important;
         border-radius:999px !important;
         border:1px solid {BORDER} !important;
         background:{TOGGLE_TRACK} !important;
-        box-shadow:inset 0 0 0 1px rgba(99,102,241,.08) !important;
-        transition:background .22s ease, border-color .22s ease, box-shadow .22s ease !important;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 1px 2px rgba(0,0,0,.08) !important;
+        transition:border-color .18s ease, box-shadow .18s ease, background .22s ease !important;
       }}
       div[class*="st-key-theme_toggle"] button:hover {{
-        border-color:rgba(99,102,241,.7) !important;
-        box-shadow:0 0 0 3px rgba(99,102,241,.10) !important;
+        border-color:rgba(99,102,241,.58) !important;
+        box-shadow:0 0 0 3px rgba(99,102,241,.09), inset 0 1px 0 rgba(255,255,255,.06) !important;
       }}
       div[class*="st-key-theme_toggle"] button::before {{
-        content:"{theme_other_icon}";
+        content:"";
         position:absolute;
         top:50%;
-        {theme_other_side}
+        {theme_passive_side}
+        width:14px;
+        height:14px;
         transform:translateY(-50%);
-        font-size:14px;
-        line-height:1;
-        opacity:.68;
+        background-image:url("{theme_passive_icon}");
+        background-size:14px 14px;
+        background-repeat:no-repeat;
+        background-position:center;
+        opacity:.55;
         z-index:1;
       }}
       div[class*="st-key-theme_toggle"] button p {{
@@ -208,21 +223,33 @@ st.markdown(
         top:2px !important;
         left:2px !important;
         z-index:2 !important;
-        width:30px !important;
-        height:30px !important;
+        width:26px !important;
+        height:26px !important;
+        min-width:26px !important;
         margin:0 !important;
         padding:0 !important;
         border-radius:50% !important;
-        display:flex !important;
-        align-items:center !important;
-        justify-content:center !important;
-        background:#F8FAFC !important;
-        color:#111827 !important;
-        font-size:14px !important;
-        line-height:1 !important;
-        box-shadow:0 2px 7px rgba(0,0,0,.24) !important;
+        display:block !important;
+        overflow:hidden !important;
+        color:transparent !important;
+        font-size:0 !important;
+        background:linear-gradient(180deg,#FFFFFF,#F8FAFC) !important;
+        border:1px solid rgba(15,23,42,.07) !important;
+        box-shadow:0 2px 7px rgba(0,0,0,.20), 0 1px 1px rgba(0,0,0,.08) !important;
         transform:translateX({theme_thumb_offset}) !important;
-        transition:transform .22s cubic-bezier(.4,0,.2,1), box-shadow .22s ease !important;
+        transition:transform .24s cubic-bezier(.22,1,.36,1), box-shadow .18s ease !important;
+      }}
+      div[class*="st-key-theme_toggle"] button p::before {{
+        content:"";
+        position:absolute;
+        inset:5px;
+        background-image:url("{theme_active_icon}");
+        background-size:16px 16px;
+        background-repeat:no-repeat;
+        background-position:center;
+      }}
+      div[class*="st-key-theme_toggle"] button:active p {{
+        box-shadow:0 1px 3px rgba(0,0,0,.18) !important;
       }}
 
       .td-kicker {{
@@ -429,10 +456,6 @@ st.markdown(
         .td-subtitle {{display:none;}}
         .td-mark {{width:38px; height:38px;}}
         .td-brand {{font-size:1.55rem;}}
-        div[class*="st-key-theme_toggle"] button {{
-          width:68px !important;
-          min-width:68px !important;
-        }}
       }}
     </style>
     """,
@@ -455,7 +478,7 @@ with brand_col:
     )
 with theme_col:
     st.button(
-        theme_icon,
+        "Tema",
         key="theme_toggle",
         help=theme_help,
         on_click=_toggle_theme,
