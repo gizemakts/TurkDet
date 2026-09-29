@@ -17,11 +17,15 @@ if not getattr(st.markdown, "_turkdet_markdown", False):
         if isinstance(body, str) and "Belge özeti yazdıkça güncellenir." in body:
             return None
 
+        if isinstance(body, str) and body.strip() == "#### Belge özeti":
+            return None
+
         if isinstance(body, str) and 'class="td-summary-grid"' in body:
             _streamlit_markdown(
                 """
                 <style>
                   .td-summary-grid {
+                    margin-top:.9rem !important;
                     margin-bottom:.65rem !important;
                   }
 
