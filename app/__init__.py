@@ -7,6 +7,38 @@ import streamlit as st
 from app.live_textarea_component import live_textarea
 
 
+# Keep small presentation-only adjustments close to the wrapped Streamlit
+# widgets. Suppress obsolete helper copy and add breathing room around the
+# always-visible document summary without changing analysis behavior.
+if not getattr(st.markdown, "_turkdet_markdown", False):
+    _streamlit_markdown = st.markdown
+
+    def _turkdet_markdown(body, *args, **kwargs):
+        if isinstance(body, str) and "Belge özeti yazdıkça güncellenir." in body:
+            return None
+
+        if isinstance(body, str) and 'class="td-summary-grid"' in body:
+            body = (
+                body
+                + """
+                <style>
+                  .td-summary-grid {
+                    margin-bottom:.65rem !important;
+                  }
+
+                  div[data-testid="stButton"] > button[kind="primary"] {
+                    margin-top:1rem !important;
+                  }
+                </style>
+                """
+            )
+
+        return _streamlit_markdown(body, *args, **kwargs)
+
+    _turkdet_markdown._turkdet_markdown = True
+    st.markdown = _turkdet_markdown
+
+
 # Remove the native hover tooltip from TürkDet's icon-only theme switch.
 if not getattr(st.button, "_turkdet_button", False):
     _streamlit_button = st.button
