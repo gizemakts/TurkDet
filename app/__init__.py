@@ -19,7 +19,7 @@ if not getattr(st.button, "_turkdet_button", False):
 
 
 # Hide Streamlit's native Ctrl+Enter instruction and resize affordance from
-# TürkDet's main text input. The analysis action remains the explicit button.
+# TürkDet's main text input, then replace it with a compact branded hint.
 if not getattr(st.text_area, "_turkdet_text_area", False):
     _streamlit_text_area = st.text_area
 
@@ -27,19 +27,69 @@ if not getattr(st.text_area, "_turkdet_text_area", False):
         value = _streamlit_text_area(*args, **kwargs)
 
         if kwargs.get("key") == "pasted_text_widget":
+            is_dark = st.session_state.get("theme_mode", "dark") == "dark"
+            hint_text = "#AAB4C5" if is_dark else "#667085"
+            hint_border = "rgba(255,255,255,.12)" if is_dark else "rgba(15,23,42,.10)"
+            hint_bg = "rgba(255,255,255,.045)" if is_dark else "rgba(255,255,255,.72)"
+            key_bg = "rgba(99,102,241,.16)" if is_dark else "rgba(99,102,241,.09)"
+            key_border = "rgba(99,102,241,.32)" if is_dark else "rgba(99,102,241,.22)"
+            key_text = "#C7D2FE" if is_dark else "#4F46E5"
+
             st.markdown(
-                """
+                f"""
                 <style>
                   div[data-testid="stTextArea"] [data-testid="InputInstructions"],
-                  div[data-testid="stTextArea"] small {
+                  div[data-testid="stTextArea"] small {{
                     display:none !important;
                     visibility:hidden !important;
-                  }
+                  }}
 
-                  div[data-testid="stTextArea"] textarea {
+                  div[data-testid="stTextArea"] textarea {{
                     resize:none !important;
-                  }
+                  }}
+
+                  .td-input-shortcut {{
+                    display:flex;
+                    justify-content:flex-end;
+                    align-items:center;
+                    gap:.42rem;
+                    margin-top:.42rem;
+                    color:{hint_text};
+                    font-size:.74rem;
+                    line-height:1;
+                    user-select:none;
+                  }}
+
+                  .td-input-shortcut .td-shortcut-pill {{
+                    display:inline-flex;
+                    align-items:center;
+                    gap:.28rem;
+                    padding:.28rem .48rem;
+                    border:1px solid {hint_border};
+                    border-radius:999px;
+                    background:{hint_bg};
+                    box-shadow:0 4px 14px rgba(0,0,0,.035);
+                  }}
+
+                  .td-input-shortcut kbd {{
+                    display:inline-flex;
+                    align-items:center;
+                    min-height:20px;
+                    padding:0 .38rem;
+                    border-radius:6px;
+                    border:1px solid {key_border};
+                    background:{key_bg};
+                    color:{key_text};
+                    font:700 .69rem/1.1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                    box-shadow:none;
+                  }}
                 </style>
+                <div class="td-input-shortcut">
+                  <div class="td-shortcut-pill">
+                    <kbd>Ctrl</kbd><span>+</span><kbd>Enter</kbd>
+                    <span>Belge özetini güncelle</span>
+                  </div>
+                </div>
                 """,
                 unsafe_allow_html=True,
             )
