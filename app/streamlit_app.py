@@ -20,23 +20,28 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-      [data-testid="stHeader"] {background: transparent;}
-      #MainMenu {visibility: hidden;}
-      footer {visibility: hidden;}
+      /* Streamlit development chrome: keep the user-facing screen product-like. */
+      header[data-testid="stHeader"],
+      [data-testid="stToolbar"],
+      [data-testid="stDecoration"],
+      #MainMenu,
+      footer {
+        display: none !important;
+        visibility: hidden !important;
+      }
 
       .block-container {
         max-width: 1180px;
-        padding-top: 1.1rem;
+        padding-top: 2rem;
         padding-bottom: 3rem;
       }
 
       .td-header {
         display:flex;
         align-items:center;
-        justify-content:space-between;
         gap:1rem;
-        padding:.55rem 0 1.25rem;
-        margin-bottom:1.35rem;
+        padding:.35rem 0 1.25rem;
+        margin-bottom:1.5rem;
         border-bottom:1px solid rgba(128,128,128,.16);
       }
       .td-brand-wrap {display:flex; align-items:center; gap:.8rem;}
@@ -48,7 +53,7 @@ st.markdown(
         align-items:center;
         justify-content:center;
         font-weight:800;
-        font-size:1.05rem;
+        font-size:1.02rem;
         letter-spacing:-.04em;
         border:1px solid rgba(255,255,255,.14);
         background:rgba(255,255,255,.06);
@@ -62,14 +67,24 @@ st.markdown(
       .td-subtitle {opacity:.58; margin-top:.27rem; font-size:.88rem;}
 
       .td-kicker {
-        font-size:.78rem;
-        font-weight:700;
-        letter-spacing:.08em;
+        font-size:.76rem;
+        font-weight:750;
+        letter-spacing:.09em;
         text-transform:uppercase;
-        opacity:.52;
-        margin-bottom:.4rem;
+        opacity:.50;
+        margin-bottom:.45rem;
       }
-      .td-lead {opacity:.72; max-width:760px; margin-bottom:1.2rem;}
+      .td-lead {
+        opacity:.70;
+        max-width:760px;
+        margin-bottom:1.25rem;
+        line-height:1.55;
+      }
+      .td-upload-copy {
+        margin:.25rem 0 .75rem;
+        font-size:.88rem;
+        opacity:.67;
+      }
 
       .td-score-card {
         border:1px solid rgba(128,128,128,.22);
@@ -110,7 +125,6 @@ st.markdown(
       }
       .td-muted {opacity:.62;}
       .td-center {text-align:center;}
-      .td-small {font-size:.84rem; opacity:.62;}
 
       .td-doc {
         border:1px solid rgba(128,128,128,.20);
@@ -136,16 +150,48 @@ st.markdown(
         border-radius:14px;
         min-height:280px;
       }
+
       div[data-testid="stFileUploader"] section {
         border-radius:14px;
+        padding-top:1rem;
+        padding-bottom:1rem;
       }
+
+      /* Streamlit's uploader button is English by default; localize only its visible label. */
+      div[data-testid="stFileUploader"] button {
+        font-size:0 !important;
+      }
+      div[data-testid="stFileUploader"] button::after {
+        content:"Belge seç";
+        font-size:.9rem;
+        font-weight:700;
+      }
+
       div[data-testid="stButton"] > button[kind="primary"] {
-        min-height:48px;
+        min-height:50px;
         border-radius:11px;
-        font-weight:750;
+        font-weight:780;
+        transition:transform .12s ease, filter .12s ease;
+      }
+      div[data-testid="stButton"] > button[kind="primary"]:not(:disabled) {
+        background:#ff4b4b;
+        border-color:#ff4b4b;
+        color:#fff;
+      }
+      div[data-testid="stButton"] > button[kind="primary"]:not(:disabled):hover {
+        filter:brightness(1.06);
+        transform:translateY(-1px);
+      }
+      div[data-testid="stButton"] > button[kind="primary"]:disabled {
+        opacity:.48;
+      }
+
+      div[data-testid="stTabs"] button[role="tab"] {
+        font-weight:650;
       }
 
       @media (max-width: 700px) {
+        .block-container {padding-top:1.25rem;}
         .td-subtitle {display:none;}
         .td-mark {width:38px; height:38px;}
         .td-brand {font-size:1.55rem;}
@@ -192,10 +238,15 @@ with input_tab:
     )
 
 with upload_tab:
+    st.markdown(
+        '<div class="td-upload-copy">Belgenizi buraya bırakın veya bilgisayarınızdan seçin.</div>',
+        unsafe_allow_html=True,
+    )
     uploaded = st.file_uploader(
         "Belge seçin",
         type=["txt", "docx", "pdf"],
         help="Taranmış/görüntü tabanlı PDF'lerde OCR henüz etkin değildir.",
+        label_visibility="collapsed",
     )
     if uploaded is not None:
         uploaded_name = uploaded.name
@@ -323,6 +374,3 @@ if analyze:
 
     if len(paragraphs) > 30:
         st.caption(f"İlk 30 paragraf gösteriliyor. Toplam paragraf: {len(paragraphs)}")
-
-st.markdown("---")
-st.caption("TürkDet · Türkçe yapay zekâ metin analizi")
