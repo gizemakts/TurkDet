@@ -10,7 +10,7 @@ from app.document_parser import DocumentParseError, extract_text, get_document_s
 from app.inference import InferenceUnavailableError, predict_text
 
 
-SHORT_TEXT_NOTICE_WORDS = 30  # UI guidance only; not a scientific validity threshold.
+MIN_WORDS = 30  # Temporary UI guard; not a validated scientific threshold.
 ACCENT = "#6366F1"
 
 
@@ -81,8 +81,8 @@ st.markdown(
         font-weight:800;
         font-size:1.02rem;
         letter-spacing:-.04em;
-        border:1px solid rgba(255,255,255,.14);
-        background:rgba(255,255,255,.06);
+        border:1px solid rgba(128,128,128,.22);
+        background:rgba(128,128,128,.07);
       }}
       .td-brand {{
         font-size:1.72rem;
@@ -197,22 +197,48 @@ st.markdown(
         padding-bottom:1rem;
       }}
 
-      div[data-testid="stFileUploader"] button {{
+      /* Replace Streamlit's English uploader helper text with Turkish copy. */
+      div[data-testid="stFileUploaderDropzoneInstructions"] > div {{
+        display:none !important;
+      }}
+      div[data-testid="stFileUploaderDropzoneInstructions"]::before {{
+        content:"Dosyayı buraya sürükleyin";
+        display:block;
+        font-size:.9rem;
+        font-weight:650;
+        color:var(--text-color);
+        margin-bottom:.15rem;
+      }}
+      div[data-testid="stFileUploaderDropzoneInstructions"]::after {{
+        content:"En fazla 10 MB • TXT, DOCX, PDF";
+        display:block;
+        font-size:.78rem;
+        opacity:.62;
+      }}
+
+      /* Localize and improve contrast of the browse button in both themes. */
+      div[data-testid="stFileUploader"] section button {{
         position:relative;
         color:transparent !important;
         min-width:112px;
+        border-color:rgba(99,102,241,.55) !important;
+        background:rgba(99,102,241,.10) !important;
       }}
-      div[data-testid="stFileUploader"] button > * {{display:none !important;}}
-      div[data-testid="stFileUploader"] button::after {{
+      div[data-testid="stFileUploader"] section button > * {{display:none !important;}}
+      div[data-testid="stFileUploader"] section button::after {{
         content:"Belge seç";
         position:absolute;
         inset:0;
         display:flex;
         align-items:center;
         justify-content:center;
-        color:var(--text-color, #fafafa);
+        color:{ACCENT};
         font-size:.9rem;
-        font-weight:700;
+        font-weight:750;
+      }}
+      div[data-testid="stFileUploader"] section button:hover {{
+        background:rgba(99,102,241,.16) !important;
+        border-color:{ACCENT} !important;
       }}
 
       div[data-testid="stButton"] > button[kind="primary"] {{
@@ -230,7 +256,13 @@ st.markdown(
         filter:brightness(1.07);
         transform:translateY(-1px);
       }}
-      div[data-testid="stButton"] > button[kind="primary"]:disabled {{opacity:.48;}}
+      div[data-testid="stButton"] > button[kind="primary"]:disabled {{
+        opacity:.72;
+        background:rgba(99,102,241,.07) !important;
+        border-color:rgba(99,102,241,.24) !important;
+        color:var(--text-color) !important;
+        cursor:not-allowed;
+      }}
 
       div[data-testid="stSegmentedControl"] {{margin-bottom:.35rem;}}
       div[data-testid="stSegmentedControl"] button {{font-weight:680;}}
@@ -268,7 +300,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<div class="td-note"><strong>Kapsam notu:</strong> TürkDet’in desteklediği metin türleri ve güvenilir kullanım aralığı, akademik ve gazete metinleri üzerindeki doğrulama tamamlandıkça güncellenecektir. Sonuçlar olasılıksaldır ve tek başına yazarlık kanıtı değildir.</div>',
+    '<div class="td-note"><strong>Kapsam notu:</strong> TürkDet, Türkçe akademik özetler ve gazete metinleri üzerinde geliştirilmektedir. Metin türlerine göre güvenilir kullanım sınırları nihai doğrulama tamamlandığında raporlanacaktır. Sonuçlar olasılıksaldır ve tek başına yazarlık kanıtı değildir.</div>',
     unsafe_allow_html=True,
 )
 
@@ -348,17 +380,20 @@ if text:
     c3.metric("Yaklaşık cümle", stats.sentences_approx)
     c4.metric("Karakter", f"{stats.characters:,}".replace(",", "."))
 
-    if stats.words < SHORT_TEXT_NOTICE_WORDS:
+    if stats.words < MIN_WORDS:
         st.warning(
-            "Metin çok kısa görünüyor. Kısa metinlerde model sinyalleri kararsız olabilir; "
-            "güvenilir minimum uzunluk nihai doğrulama tamamlandığında belirlenecektir."
+            f"Analiz için en az {MIN_WORDS} kelimelik bir metin gerekli. "
+            "Bu sınır geliştirme aşamasındaki geçici bir arayüz korumasıdır; "
+            "bilimsel geçerlilik eşiği değildir ve nihai doğrulama sonrasında güncellenecektir."
         )
+
+can_analyze = bool(text) and stats is not None and stats.words >= MIN_WORDS
 
 analyze = st.button(
     "Analizi Başlat",
     type="primary",
     use_container_width=True,
-    disabled=not bool(text),
+    disabled=not can_analyze,
 )
 
 st.caption(
