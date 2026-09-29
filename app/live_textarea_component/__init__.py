@@ -58,6 +58,26 @@ def live_textarea(
     return value if result is None else str(result)
 
 
+def _buffered_uploaded_document() -> _UploadedDocumentAdapter | None:
+    """Return the last selected document when the uploader is remounted."""
+
+    name = str(st.session_state.get("uploaded_name_buffer", "") or "")
+    data = st.session_state.get("uploaded_data_buffer", b"")
+    if not name or not isinstance(data, (bytes, bytearray)) or not data:
+        return None
+    return _UploadedDocumentAdapter(name, bytes(data))
+
+
+def _clear_uploaded_document_state() -> None:
+    """Clear document state only after an explicit remove action."""
+
+    st.session_state["uploaded_text_buffer"] = ""
+    st.session_state["uploaded_name_buffer"] = ""
+    st.session_state["uploaded_size_buffer"] = 0
+    st.session_state["uploaded_data_buffer"] = b""
+    st.session_state["uploaded_mime_buffer"] = ""
+
+
 def _install_document_uploader_override() -> None:
     """Route TürkDet's document field through the custom uploader component."""
 
@@ -78,20 +98,27 @@ def _install_document_uploader_override() -> None:
             key="turkdet_uploaded_document",
         )
 
+        # Conditional Streamlit widgets are removed when the user switches to
+        # the pasted-text tab. Restore the last document when this component is
+        # mounted again instead of treating it as a brand-new empty uploader.
         if event is None:
-            return None
+            return _buffered_uploaded_document()
 
         if event.kind == "cleared":
-            st.session_state["uploaded_text_buffer"] = ""
-            st.session_state["uploaded_name_buffer"] = ""
-            st.session_state["uploaded_size_buffer"] = 0
+            _clear_uploaded_document_state()
             return None
 
         if event.kind == "error":
             st.error(event.message)
-            return None
+            return _buffered_uploaded_document()
 
+        # Persist the raw document before parsing. Parser failures (for example,
+        # scanned PDFs without a text layer) must not discard the user's file.
+        st.session_state["uploaded_name_buffer"] = event.name
         st.session_state["uploaded_size_buffer"] = event.size
+        st.session_state["uploaded_data_buffer"] = event.data
+        st.session_state["uploaded_mime_buffer"] = event.mime_type
+        st.session_state["uploaded_text_buffer"] = ""
         return _UploadedDocumentAdapter(event.name, event.data)
 
     # The second marker intentionally prevents app/__init__.py from installing
