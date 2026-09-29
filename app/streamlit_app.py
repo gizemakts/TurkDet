@@ -119,7 +119,6 @@ MOON_ICON = (
     "%3Cpath d='M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z'/%3E%3C/svg%3E"
 )
 
-theme_help = "Açık temaya geç" if is_dark else "Koyu temaya geç"
 theme_thumb_offset = "32px" if is_dark else "0px"
 theme_active_icon = MOON_ICON if is_dark else SUN_ICON
 theme_passive_icon = SUN_ICON if is_dark else MOON_ICON
@@ -310,27 +309,6 @@ st.markdown(
         margin:.1rem 0 1.35rem;
         line-height:1.65;
         font-size:.96rem;
-      }}
-      .td-note {{
-        position:relative;
-        border:1px solid rgba(99,102,241,.24);
-        background:linear-gradient(135deg,rgba(99,102,241,.095),rgba(99,102,241,.045));
-        border-radius:15px;
-        padding:.9rem 1rem .9rem 1.15rem;
-        margin:.7rem 0 1.05rem;
-        font-size:.86rem;
-        line-height:1.6;
-        box-shadow:0 8px 24px rgba(99,102,241,.045);
-      }}
-      .td-note::before {{
-        content:"";
-        position:absolute;
-        left:0;
-        top:14px;
-        bottom:14px;
-        width:3px;
-        border-radius:3px;
-        background:linear-gradient(180deg,#818CF8,#6366F1);
       }}
 
       /* Input source selector */
@@ -577,25 +555,6 @@ st.markdown(
         box-shadow:none !important;
       }}
 
-      .td-footnote {{
-        display:flex;
-        align-items:flex-start;
-        gap:.48rem;
-        margin-top:.9rem;
-        color:{MUTED};
-        font-size:.74rem;
-        line-height:1.5;
-      }}
-      .td-footnote::before {{
-        content:"";
-        flex:0 0 auto;
-        width:5px;
-        height:5px;
-        margin-top:.43rem;
-        border-radius:50%;
-        background:rgba(99,102,241,.62);
-      }}
-
       /* Result screen */
       .td-score-card {{
         border:1px solid {BORDER};
@@ -664,7 +623,6 @@ st.markdown(
         .td-subtitle {{display:none;}}
         .td-mark {{width:39px;height:39px;border-radius:11px;}}
         .td-brand {{font-size:1.5rem;}}
-        .td-note {{padding:.82rem .88rem .82rem 1rem;}}
         [data-testid="stMetric"] {{min-height:88px;}}
       }}
     </style>
@@ -690,7 +648,6 @@ with theme_col:
     st.button(
         "Tema",
         key="theme_toggle",
-        help=theme_help,
         on_click=_toggle_theme,
     )
 
@@ -700,10 +657,6 @@ st.markdown('<div class="td-kicker">Belge analizi</div>', unsafe_allow_html=True
 st.markdown("## Türkçe metninizi analiz edin")
 st.markdown(
     '<div class="td-lead">Metni doğrudan yapıştırın veya TXT, DOCX ya da metin katmanına sahip PDF belgesi yükleyin.</div>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    '<div class="td-note"><strong>Kapsam notu:</strong> TürkDet, Türkçe akademik özetler ve gazete metinleri üzerinde geliştirilmektedir. Metin türlerine göre güvenilir kullanım sınırları nihai doğrulama tamamlandığında raporlanacaktır. Sonuçlar olasılıksaldır ve tek başına yazarlık kanıtı değildir.</div>',
     unsafe_allow_html=True,
 )
 
@@ -799,12 +752,6 @@ analyze = st.button(
     type="primary",
     use_container_width=True,
     disabled=not can_analyze,
-)
-
-st.markdown(
-    '<div class="td-footnote">Yerel demo metni kalıcı bir dosyaya yazmak üzere tasarlanmamıştır. '
-    'Bulut sürümü yayınlanmadan önce veri işleme ve gizlilik politikası ayrıca doğrulanacaktır.</div>',
-    unsafe_allow_html=True,
 )
 
 if analyze:
