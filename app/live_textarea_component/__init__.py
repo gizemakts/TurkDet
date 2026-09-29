@@ -194,4 +194,99 @@ def _install_document_uploader_override() -> None:
     st.file_uploader = _turkdet_file_uploader
 
 
+def _install_expander_theme_override() -> None:
+    """Keep native Streamlit expanders consistent with TürkDet's runtime theme."""
+
+    if getattr(st.expander, "_turkdet_themed_expander", False):
+        return
+
+    native_expander = st.expander
+
+    def _turkdet_expander(label, *args, **kwargs):
+        is_dark = st.session_state.get("theme_mode", "dark") == "dark"
+        if is_dark:
+            surface = "#121824"
+            header = "#151C29"
+            header_hover = "#182131"
+            content = "#0E131C"
+            text = "#F4F7FB"
+            muted = "#97A3B6"
+            border = "rgba(255,255,255,.105)"
+        else:
+            surface = "#FFFFFF"
+            header = "#F8FAFD"
+            header_hover = "#F2F4F8"
+            content = "#FFFFFF"
+            text = "#111827"
+            muted = "#667085"
+            border = "rgba(15,23,42,.105)"
+
+        st.markdown(
+            f"""
+            <style>
+              details[data-testid="stExpander"],
+              [data-testid="stExpander"] {{
+                background:{surface} !important;
+                border:1px solid {border} !important;
+                border-radius:12px !important;
+                overflow:hidden !important;
+              }}
+
+              details[data-testid="stExpander"] > summary,
+              [data-testid="stExpander"] summary,
+              [data-testid="stExpander"] summary:focus,
+              [data-testid="stExpander"] summary:focus-visible,
+              [data-testid="stExpander"][open] summary {{
+                background:{header} !important;
+                background-color:{header} !important;
+                color:{text} !important;
+                border:0 !important;
+                outline:0 !important;
+                box-shadow:none !important;
+              }}
+
+              [data-testid="stExpander"] summary:hover {{
+                background:{header_hover} !important;
+                background-color:{header_hover} !important;
+                color:{text} !important;
+              }}
+
+              [data-testid="stExpander"] summary > div,
+              [data-testid="stExpander"] summary [data-testid="stMarkdownContainer"],
+              [data-testid="stExpander"] summary p,
+              [data-testid="stExpander"] summary span,
+              [data-testid="stExpander"] summary svg {{
+                background:transparent !important;
+                background-color:transparent !important;
+                color:{text} !important;
+                fill:currentColor !important;
+              }}
+
+              [data-testid="stExpanderDetails"] {{
+                background:{content} !important;
+                background-color:{content} !important;
+                color:{text} !important;
+                border-top:1px solid {border} !important;
+              }}
+
+              [data-testid="stExpanderDetails"] p,
+              [data-testid="stExpanderDetails"] span,
+              [data-testid="stExpanderDetails"] div {{
+                color:{text};
+              }}
+
+              [data-testid="stExpanderDetails"] [data-testid="stCaptionContainer"] {{
+                color:{muted} !important;
+              }}
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        return native_expander(label, *args, **kwargs)
+
+    _turkdet_expander._turkdet_themed_expander = True
+    st.expander = _turkdet_expander
+
+
 _install_document_uploader_override()
+_install_expander_theme_override()
