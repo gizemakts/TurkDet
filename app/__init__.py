@@ -1,0 +1,1 @@
+"""TürkDet web application package."""
