@@ -481,6 +481,44 @@ st.markdown(
         font-weight:790;
         letter-spacing:-.025em;
       }}
+      .td-summary-grid {{
+        display:grid;
+        grid-template-columns:repeat(4,minmax(0,1fr));
+        gap:.9rem;
+        margin-bottom:.15rem;
+      }}
+      .td-summary-card {{
+        position:relative;
+        min-height:98px;
+        background:linear-gradient(145deg,{SURFACE},{SURFACE_2});
+        border:1px solid {BORDER};
+        border-radius:15px;
+        padding:.82rem .9rem .72rem;
+        box-shadow:{SHADOW_SOFT};
+        overflow:hidden;
+      }}
+      .td-summary-card::before {{
+        content:"";
+        position:absolute;
+        left:0;
+        right:0;
+        top:0;
+        height:2px;
+        background:linear-gradient(90deg,rgba(99,102,241,.85),rgba(129,140,248,.18),transparent);
+      }}
+      .td-summary-label {{
+        color:{MUTED};
+        font-size:.75rem;
+        font-weight:680;
+        margin-bottom:.42rem;
+      }}
+      .td-summary-value {{
+        color:{TEXT};
+        font-size:1.9rem;
+        font-weight:760;
+        letter-spacing:-.04em;
+        line-height:1.1;
+      }}
       [data-testid="stMetric"] {{
         position:relative;
         min-height:98px;
@@ -623,7 +661,8 @@ st.markdown(
         .td-subtitle {{display:none;}}
         .td-mark {{width:39px;height:39px;border-radius:11px;}}
         .td-brand {{font-size:1.5rem;}}
-        [data-testid="stMetric"] {{min-height:88px;}}
+        .td-summary-grid {{grid-template-columns:repeat(2,minmax(0,1fr));}}
+        .td-summary-card,[data-testid="stMetric"] {{min-height:88px;}}
       }}
     </style>
     """,
@@ -687,7 +726,7 @@ if input_mode == "Metin yapıştır":
     st.session_state["pasted_text_buffer"] = pasted_text
     text = pasted_text.strip()
     st.markdown(
-        '<div class="td-help">Belge özeti, girilen metin hakkında hızlı bilgi verir. TürkDet model analizi yalnızca <strong>Analizi Başlat</strong> düğmesine bastığınızda çalışır.</div>',
+        '<div class="td-help">Belge özeti yazdıkça güncellenir. TürkDet model analizi yalnızca <strong>Analizi Başlat</strong> düğmesine bastığınızda çalışır.</div>',
         unsafe_allow_html=True,
     )
 
@@ -726,24 +765,45 @@ elif input_mode == "Belge yükle":
         with st.expander("Çıkarılan metni önizle"):
             st.write(text[:8000])
 
-stats = None
-if text:
-    stats = get_document_stats(text)
-    st.markdown("#### Belge özeti")
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Kelime", f"{stats.words:,}".replace(",", "."))
-    c2.metric("Paragraf", stats.paragraphs)
-    c3.metric("Yaklaşık cümle", stats.sentences_approx)
-    c4.metric("Karakter", f"{stats.characters:,}".replace(",", "."))
+stats = get_document_stats(text) if text else None
+summary_words = stats.words if stats is not None else 0
+summary_paragraphs = stats.paragraphs if stats is not None else 0
+summary_sentences = stats.sentences_approx if stats is not None else 0
+summary_characters = stats.characters if stats is not None else 0
 
-    if stats.words < MIN_WORDS:
-        st.markdown(
-            f'<div class="td-short-warning"><strong>Metin çok kısa.</strong> '
-            f'Analiz için en az {MIN_WORDS} kelimelik bir metin gerekli. '
-            'Bu sınır geliştirme aşamasındaki geçici bir arayüz korumasıdır; '
-            'bilimsel geçerlilik eşiği değildir ve nihai doğrulama sonrasında güncellenecektir.</div>',
-            unsafe_allow_html=True,
-        )
+st.markdown("#### Belge özeti")
+st.markdown(
+    f"""
+    <div class="td-summary-grid">
+      <div class="td-summary-card">
+        <div class="td-summary-label">Kelime</div>
+        <div class="td-summary-value" id="td-stat-words">{summary_words:,}</div>
+      </div>
+      <div class="td-summary-card">
+        <div class="td-summary-label">Paragraf</div>
+        <div class="td-summary-value" id="td-stat-paragraphs">{summary_paragraphs:,}</div>
+      </div>
+      <div class="td-summary-card">
+        <div class="td-summary-label">Yaklaşık cümle</div>
+        <div class="td-summary-value" id="td-stat-sentences">{summary_sentences:,}</div>
+      </div>
+      <div class="td-summary-card">
+        <div class="td-summary-label">Karakter</div>
+        <div class="td-summary-value" id="td-stat-characters">{summary_characters:,}</div>
+      </div>
+    </div>
+    """.replace(",", "."),
+    unsafe_allow_html=True,
+)
+
+if text and stats is not None and stats.words < MIN_WORDS:
+    st.markdown(
+        f'<div class="td-short-warning"><strong>Metin çok kısa.</strong> '
+        f'Analiz için en az {MIN_WORDS} kelimelik bir metin gerekli. '
+        'Bu sınır geliştirme aşamasındaki geçici bir arayüz korumasıdır; '
+        'bilimsel geçerlilik eşiği değildir ve nihai doğrulama sonrasında güncellenecektir.</div>',
+        unsafe_allow_html=True,
+    )
 
 can_analyze = bool(text) and stats is not None and stats.words >= MIN_WORDS
 
