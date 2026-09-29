@@ -65,42 +65,47 @@ def _render_document(paragraphs: list[str], caption: str) -> None:
 
 
 is_dark = st.session_state["theme_mode"] == "dark"
-input_mode_state = st.session_state.get("input_mode", "Metin yapıştır")
-paste_selected = input_mode_state != "Belge yükle"
 
 if is_dark:
-    BG = "#0E1117"
-    SURFACE = "#151A23"
-    FIELD = "#111827"
-    TEXT = "#F7F8FA"
-    MUTED = "#9CA6B5"
-    BORDER = "rgba(255,255,255,.12)"
+    BG = "#0B0F16"
+    BG_SOFT = "#0E131C"
+    SURFACE = "#121824"
+    SURFACE_2 = "#151C29"
+    FIELD = "#101826"
+    TEXT = "#F4F7FB"
+    MUTED = "#97A3B6"
+    BORDER = "rgba(255,255,255,.105)"
+    BORDER_STRONG = "rgba(255,255,255,.16)"
     SOFT = "rgba(255,255,255,.045)"
-    TOGGLE_TRACK = "linear-gradient(135deg,#1B2230,#252D40)"
-    SEGMENT_TRACK = "#151A23"
-    SHORT_WARNING_BG = "rgba(245,158,11,.10)"
+    SHADOW = "0 16px 42px rgba(0,0,0,.22)"
+    SHADOW_SOFT = "0 8px 24px rgba(0,0,0,.14)"
+    TOGGLE_TRACK = "linear-gradient(135deg,#18202E,#222C3E)"
+    SEGMENT_TRACK = "#0F1622"
+    SEGMENT_SELECTED = "rgba(99,102,241,.18)"
+    SHORT_WARNING_BG = "rgba(245,158,11,.095)"
     SHORT_WARNING_BORDER = "rgba(245,158,11,.28)"
-    SHORT_WARNING_TEXT = "#FCD34D"
+    SHORT_WARNING_TEXT = "#F6C85F"
+    PAGE_GLOW = "radial-gradient(circle at 16% 0%, rgba(99,102,241,.075), transparent 28%)"
 else:
-    BG = "#FFFFFF"
-    SURFACE = "#F6F7FB"
+    BG = "#F7F8FC"
+    BG_SOFT = "#FBFCFE"
+    SURFACE = "#FFFFFF"
+    SURFACE_2 = "#F8FAFD"
     FIELD = "#FFFFFF"
     TEXT = "#111827"
     MUTED = "#667085"
-    BORDER = "rgba(15,23,42,.14)"
-    SOFT = "rgba(15,23,42,.035)"
-    TOGGLE_TRACK = "linear-gradient(135deg,#E8EEFF,#EEF2FF)"
-    SEGMENT_TRACK = "#F4F6FA"
-    SHORT_WARNING_BG = "#FFF8E8"
-    SHORT_WARNING_BORDER = "rgba(217,119,6,.25)"
+    BORDER = "rgba(15,23,42,.105)"
+    BORDER_STRONG = "rgba(15,23,42,.15)"
+    SOFT = "rgba(15,23,42,.03)"
+    SHADOW = "0 16px 42px rgba(15,23,42,.07)"
+    SHADOW_SOFT = "0 8px 22px rgba(15,23,42,.055)"
+    TOGGLE_TRACK = "linear-gradient(135deg,#E8EEFF,#F2F4FF)"
+    SEGMENT_TRACK = "#EEF1F7"
+    SEGMENT_SELECTED = "#FFFFFF"
+    SHORT_WARNING_BG = "#FFFAEB"
+    SHORT_WARNING_BORDER = "rgba(217,119,6,.24)"
     SHORT_WARNING_TEXT = "#92400E"
-
-paste_bg = "rgba(99,102,241,.16)" if paste_selected else "transparent"
-paste_border = "rgba(99,102,241,.48)" if paste_selected else "transparent"
-paste_color = ACCENT if paste_selected else TEXT
-upload_bg = "transparent" if paste_selected else "rgba(99,102,241,.16)"
-upload_border = "transparent" if paste_selected else "rgba(99,102,241,.48)"
-upload_color = TEXT if paste_selected else ACCENT
+    PAGE_GLOW = "radial-gradient(circle at 16% 0%, rgba(99,102,241,.055), transparent 30%)"
 
 SUN_ICON = (
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' "
@@ -132,19 +137,24 @@ st.markdown(
         visibility:hidden !important;
       }}
 
+      html {{
+        color-scheme:{'dark' if is_dark else 'light'};
+      }}
+
       .stApp {{
         --background-color:{BG};
         --secondary-background-color:{SURFACE};
         --text-color:{TEXT};
         --primary-color:{ACCENT};
-        background:{BG} !important;
+        background:{PAGE_GLOW}, linear-gradient(180deg,{BG_SOFT} 0%,{BG} 28%,{BG} 100%) !important;
         color:{TEXT} !important;
       }}
       [data-testid="stAppViewContainer"],
       [data-testid="stMain"] {{
-        background:{BG} !important;
+        background:transparent !important;
         color:{TEXT} !important;
       }}
+
       .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5,
       .stApp p, .stApp label,
       .stApp [data-testid="stMarkdownContainer"] {{
@@ -155,51 +165,55 @@ st.markdown(
       }}
 
       .block-container {{
-        max-width:1180px;
-        padding-top:1.8rem;
-        padding-bottom:3rem;
+        max-width:1120px;
+        padding-top:1.55rem;
+        padding-bottom:3.4rem;
       }}
 
+      /* Header */
       .td-brand-wrap {{
         display:flex;
         align-items:center;
-        gap:.8rem;
-        padding:.25rem 0 .8rem;
+        gap:.82rem;
+        padding:.2rem 0 .72rem;
       }}
       .td-mark {{
-        width:42px;
-        height:42px;
-        border-radius:11px;
+        width:44px;
+        height:44px;
+        border-radius:13px;
         display:flex;
         align-items:center;
         justify-content:center;
-        font-weight:800;
-        font-size:1.02rem;
+        font-weight:850;
+        font-size:1rem;
         letter-spacing:-.04em;
-        border:1px solid {BORDER};
-        background:{SOFT};
+        border:1px solid {BORDER_STRONG};
+        background:linear-gradient(145deg,rgba(99,102,241,.12),{SURFACE});
+        box-shadow:{SHADOW_SOFT};
       }}
       .td-brand {{
-        font-size:1.72rem;
-        font-weight:800;
+        font-size:1.66rem;
+        font-weight:840;
         letter-spacing:-.045em;
         line-height:1;
       }}
       .td-subtitle {{
         color:{MUTED};
-        margin-top:.27rem;
-        font-size:.88rem;
+        margin-top:.28rem;
+        font-size:.82rem;
+        letter-spacing:.005em;
       }}
       .td-header-rule {{
         height:1px;
-        background:{BORDER};
-        margin:.2rem 0 1.5rem;
+        background:linear-gradient(90deg,{BORDER_STRONG},transparent 88%);
+        margin:.22rem 0 1.7rem;
       }}
 
+      /* Premium vector sun/moon theme switch */
       div[class*="st-key-theme_toggle"] {{
         display:flex;
         justify-content:flex-end;
-        padding-top:.38rem;
+        padding-top:.36rem;
       }}
       div[class*="st-key-theme_toggle"] button {{
         position:relative !important;
@@ -210,14 +224,14 @@ st.markdown(
         padding:0 !important;
         overflow:hidden !important;
         border-radius:999px !important;
-        border:1px solid {BORDER} !important;
+        border:1px solid {BORDER_STRONG} !important;
         background:{TOGGLE_TRACK} !important;
-        box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 1px 2px rgba(0,0,0,.08) !important;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 3px 12px rgba(0,0,0,.10) !important;
         transition:border-color .18s ease, box-shadow .18s ease, background .22s ease !important;
       }}
       div[class*="st-key-theme_toggle"] button:hover {{
         border-color:rgba(99,102,241,.58) !important;
-        box-shadow:0 0 0 3px rgba(99,102,241,.09), inset 0 1px 0 rgba(255,255,255,.06) !important;
+        box-shadow:0 0 0 3px rgba(99,102,241,.09), 0 3px 12px rgba(0,0,0,.10) !important;
       }}
       div[class*="st-key-theme_toggle"] button::before {{
         content:"";
@@ -231,7 +245,7 @@ st.markdown(
         background-size:14px 14px;
         background-repeat:no-repeat;
         background-position:center;
-        opacity:.55;
+        opacity:.52;
         z-index:1;
       }}
       div[class*="st-key-theme_toggle"] button p {{
@@ -265,58 +279,330 @@ st.markdown(
         background-position:center;
       }}
 
+      /* Hero */
       .td-kicker {{
-        font-size:.76rem;
-        font-weight:750;
-        letter-spacing:.09em;
+        display:inline-flex;
+        align-items:center;
+        gap:.45rem;
+        font-size:.7rem;
+        font-weight:800;
+        letter-spacing:.12em;
         text-transform:uppercase;
-        color:{MUTED};
-        margin-bottom:.45rem;
+        color:{ACCENT};
+        margin-bottom:.5rem;
+      }}
+      .td-kicker::before {{
+        content:"";
+        width:6px;
+        height:6px;
+        border-radius:50%;
+        background:{ACCENT};
+        box-shadow:0 0 0 4px rgba(99,102,241,.10);
+      }}
+      .stApp h2 {{
+        letter-spacing:-.034em;
+        font-weight:820;
+        margin-top:.16rem;
       }}
       .td-lead {{
         color:{MUTED};
         max-width:760px;
-        margin-bottom:1.1rem;
-        line-height:1.55;
-      }}
-      .td-upload-copy {{
-        margin:.5rem 0 .75rem;
-        font-size:.88rem;
-        color:{MUTED};
-      }}
-      .td-help {{
-        margin:.35rem 0 1rem;
-        font-size:.84rem;
-        color:{MUTED};
+        margin:.1rem 0 1.35rem;
+        line-height:1.65;
+        font-size:.96rem;
       }}
       .td-note {{
-        border:1px solid rgba(99,102,241,.30);
-        background:rgba(99,102,241,.08);
-        border-radius:12px;
-        padding:.8rem .95rem;
-        margin:.85rem 0 1.15rem;
-        font-size:.88rem;
-        line-height:1.5;
+        position:relative;
+        border:1px solid rgba(99,102,241,.24);
+        background:linear-gradient(135deg,rgba(99,102,241,.095),rgba(99,102,241,.045));
+        border-radius:15px;
+        padding:.9rem 1rem .9rem 1.15rem;
+        margin:.7rem 0 1.05rem;
+        font-size:.86rem;
+        line-height:1.6;
+        box-shadow:0 8px 24px rgba(99,102,241,.045);
       }}
+      .td-note::before {{
+        content:"";
+        position:absolute;
+        left:0;
+        top:14px;
+        bottom:14px;
+        width:3px;
+        border-radius:3px;
+        background:linear-gradient(180deg,#818CF8,#6366F1);
+      }}
+
+      /* Input source selector */
+      div[data-testid="stSegmentedControl"] {{
+        margin-bottom:.72rem;
+      }}
+      div[data-testid="stSegmentedControl"] div[role="group"] {{
+        width:fit-content !important;
+        padding:3px !important;
+        gap:2px !important;
+        border:1px solid {BORDER} !important;
+        border-radius:12px !important;
+        background:{SEGMENT_TRACK} !important;
+        box-shadow:inset 0 1px 1px rgba(0,0,0,.025) !important;
+      }}
+      div[data-testid="stSegmentedControl"] button {{
+        min-height:34px !important;
+        padding:.22rem .9rem !important;
+        border:0 !important;
+        border-radius:9px !important;
+        background:transparent !important;
+        color:{MUTED} !important;
+        box-shadow:none !important;
+        font-weight:700 !important;
+        transition:background .16s ease,color .16s ease,box-shadow .16s ease !important;
+      }}
+      div[data-testid="stSegmentedControl"] button * {{
+        background:transparent !important;
+        color:inherit !important;
+      }}
+      div[data-testid="stSegmentedControl"] button[aria-pressed="true"] {{
+        background:{SEGMENT_SELECTED} !important;
+        color:{TEXT} !important;
+        box-shadow:0 1px 3px rgba(15,23,42,.10), inset 0 0 0 1px rgba(99,102,241,.34) !important;
+      }}
+      div[data-testid="stSegmentedControl"] button[aria-pressed="true"] * {{
+        background:transparent !important;
+        color:inherit !important;
+      }}
+      div[data-testid="stSegmentedControl"] button:hover:not([aria-pressed="true"]) {{
+        color:{TEXT} !important;
+        background:{SOFT} !important;
+      }}
+
+      /* Text area */
+      div[data-testid="stTextArea"] {{
+        margin-top:.15rem;
+      }}
+      div[data-testid="stTextArea"] > div,
+      div[data-testid="stTextArea"] div[data-baseweb="base-input"],
+      div[data-testid="stTextArea"] div[data-baseweb="textarea"] {{
+        border:1px solid {BORDER_STRONG} !important;
+        outline:0 !important;
+        border-radius:16px !important;
+        background:{FIELD} !important;
+        box-shadow:{SHADOW_SOFT} !important;
+        overflow:hidden !important;
+        transition:border-color .17s ease,box-shadow .17s ease !important;
+      }}
+      div[data-testid="stTextArea"]:focus-within > div,
+      div[data-testid="stTextArea"] div[data-baseweb="base-input"]:focus-within,
+      div[data-testid="stTextArea"] div[data-baseweb="textarea"]:focus-within {{
+        border-color:rgba(99,102,241,.72) !important;
+        box-shadow:0 0 0 3px rgba(99,102,241,.10),{SHADOW_SOFT} !important;
+      }}
+      div[data-testid="stTextArea"] textarea {{
+        min-height:286px !important;
+        padding:1rem 1.05rem !important;
+        background:{FIELD} !important;
+        color:{TEXT} !important;
+        border:0 !important;
+        outline:0 !important;
+        box-shadow:none !important;
+        -webkit-appearance:none !important;
+        appearance:none !important;
+        line-height:1.6 !important;
+      }}
+      div[data-testid="stTextArea"] textarea:focus {{
+        border:0 !important;
+        outline:0 !important;
+        box-shadow:none !important;
+      }}
+      div[data-testid="stTextArea"] textarea::placeholder {{
+        color:{MUTED} !important;
+        opacity:.78;
+      }}
+
+      .td-help {{
+        margin:.72rem 0 1.05rem;
+        font-size:.8rem;
+        color:{MUTED};
+        line-height:1.55;
+      }}
+
+      /* Upload */
+      .td-upload-copy {{
+        margin:.08rem 0 .7rem;
+        font-size:.83rem;
+        color:{MUTED};
+      }}
+      div[data-testid="stFileUploader"] section {{
+        min-height:90px;
+        border-radius:16px !important;
+        padding:1rem !important;
+        background:{SURFACE} !important;
+        border:1px dashed rgba(99,102,241,.34) !important;
+        box-shadow:{SHADOW_SOFT} !important;
+        transition:border-color .16s ease,background .16s ease !important;
+      }}
+      div[data-testid="stFileUploader"] section:hover {{
+        border-color:rgba(99,102,241,.58) !important;
+        background:{SURFACE_2} !important;
+      }}
+      div[data-testid="stFileUploaderDropzoneInstructions"] {{
+        display:flex !important;
+        flex-direction:column !important;
+        justify-content:center !important;
+        gap:.34rem !important;
+        line-height:1.2 !important;
+      }}
+      div[data-testid="stFileUploaderDropzoneInstructions"] > div {{
+        display:none !important;
+      }}
+      div[data-testid="stFileUploaderDropzoneInstructions"]::before {{
+        content:"Dosyayı buraya sürükleyin";
+        display:block;
+        font-size:.88rem;
+        font-weight:720;
+        color:{TEXT};
+      }}
+      div[data-testid="stFileUploaderDropzoneInstructions"]::after {{
+        content:"En fazla 10 MB • TXT, DOCX, PDF";
+        display:block;
+        font-size:.74rem;
+        color:{MUTED};
+      }}
+      div[data-testid="stFileUploader"] section button {{
+        position:relative !important;
+        color:transparent !important;
+        min-width:108px !important;
+        min-height:40px !important;
+        border-radius:10px !important;
+        border:1px solid rgba(99,102,241,.46) !important;
+        background:rgba(99,102,241,.095) !important;
+        box-shadow:none !important;
+      }}
+      div[data-testid="stFileUploader"] section button > * {{
+        display:none !important;
+      }}
+      div[data-testid="stFileUploader"] section button::after {{
+        content:"Belge seç";
+        position:absolute;
+        inset:0;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:{ACCENT};
+        font-size:.84rem;
+        font-weight:760;
+      }}
+      div[data-testid="stFileUploader"] section button:hover {{
+        background:rgba(99,102,241,.15) !important;
+        border-color:{ACCENT} !important;
+      }}
+
+      /* Document summary */
+      .stApp h4 {{
+        margin-top:1.2rem;
+        margin-bottom:.68rem;
+        font-weight:790;
+        letter-spacing:-.025em;
+      }}
+      [data-testid="stMetric"] {{
+        position:relative;
+        min-height:98px;
+        background:linear-gradient(145deg,{SURFACE},{SURFACE_2});
+        border:1px solid {BORDER};
+        border-radius:15px;
+        padding:.82rem .9rem .72rem;
+        box-shadow:{SHADOW_SOFT};
+        overflow:hidden;
+      }}
+      [data-testid="stMetric"]::before {{
+        content:"";
+        position:absolute;
+        left:0;
+        right:0;
+        top:0;
+        height:2px;
+        background:linear-gradient(90deg,rgba(99,102,241,.85),rgba(129,140,248,.18),transparent);
+      }}
+      [data-testid="stMetricLabel"] {{
+        color:{MUTED} !important;
+        font-size:.75rem !important;
+        font-weight:680 !important;
+      }}
+      [data-testid="stMetricValue"] {{
+        color:{TEXT} !important;
+        font-size:1.9rem !important;
+        font-weight:760 !important;
+        letter-spacing:-.04em;
+      }}
+
       .td-short-warning {{
         border:1px solid {SHORT_WARNING_BORDER};
         background:{SHORT_WARNING_BG};
         color:{SHORT_WARNING_TEXT} !important;
-        border-radius:12px;
-        padding:.9rem 1rem;
-        margin:.8rem 0 1rem;
-        font-size:.9rem;
-        line-height:1.5;
+        border-radius:14px;
+        padding:.92rem 1rem;
+        margin:.9rem 0 1.05rem;
+        font-size:.84rem;
+        line-height:1.55;
+        box-shadow:0 8px 24px rgba(245,158,11,.04);
       }}
       .td-short-warning strong {{
         color:inherit !important;
       }}
 
+      /* Primary action */
+      div[data-testid="stButton"] > button[kind="primary"] {{
+        min-height:50px;
+        border-radius:13px;
+        font-weight:780;
+        letter-spacing:-.01em;
+        transition:transform .12s ease,filter .12s ease,box-shadow .12s ease;
+      }}
+      div[data-testid="stButton"] > button[kind="primary"]:not(:disabled) {{
+        background:linear-gradient(135deg,#6366F1,#7377F5) !important;
+        border-color:transparent !important;
+        color:#fff !important;
+        box-shadow:0 10px 24px rgba(99,102,241,.22) !important;
+      }}
+      div[data-testid="stButton"] > button[kind="primary"]:not(:disabled):hover {{
+        filter:brightness(1.045);
+        transform:translateY(-1px);
+        box-shadow:0 13px 28px rgba(99,102,241,.26) !important;
+      }}
+      div[data-testid="stButton"] > button[kind="primary"]:disabled {{
+        opacity:1 !important;
+        background:{SURFACE_2} !important;
+        border:1px solid {BORDER} !important;
+        color:{MUTED} !important;
+        cursor:not-allowed;
+        box-shadow:none !important;
+      }}
+
+      .td-footnote {{
+        display:flex;
+        align-items:flex-start;
+        gap:.48rem;
+        margin-top:.9rem;
+        color:{MUTED};
+        font-size:.74rem;
+        line-height:1.5;
+      }}
+      .td-footnote::before {{
+        content:"";
+        flex:0 0 auto;
+        width:5px;
+        height:5px;
+        margin-top:.43rem;
+        border-radius:50%;
+        background:rgba(99,102,241,.62);
+      }}
+
+      /* Result screen */
       .td-score-card {{
         border:1px solid {BORDER};
         border-radius:18px;
         padding:1.4rem 1.25rem;
-        background:{SURFACE};
+        background:linear-gradient(145deg,{SURFACE},{SURFACE_2});
+        box-shadow:{SHADOW};
       }}
       .td-ring {{
         --score:0;
@@ -344,19 +630,15 @@ st.markdown(
         font-weight:800;
         letter-spacing:-.05em;
       }}
-      .td-ring-label {{
-        text-align:center;
-        font-weight:750;
-        font-size:1rem;
-      }}
+      .td-ring-label {{text-align:center;font-weight:750;font-size:1rem;}}
       .td-muted {{color:{MUTED};}}
       .td-center {{text-align:center;}}
-
       .td-doc {{
         border:1px solid {BORDER};
         border-radius:16px;
         background:{SURFACE};
         padding:1.05rem 1.15rem;
+        box-shadow:{SHADOW_SOFT};
       }}
       .td-paragraph {{
         padding:.85rem .95rem;
@@ -371,160 +653,19 @@ st.markdown(
         color:{MUTED};
         margin-bottom:.35rem;
       }}
-
-      div[data-testid="stTextArea"] [data-baseweb="textarea"] {{
-        border:1px solid {BORDER} !important;
-        border-radius:14px !important;
-        background:{FIELD} !important;
-        box-shadow:none !important;
-        overflow:hidden;
-      }}
-      div[data-testid="stTextArea"] [data-baseweb="textarea"]:focus-within {{
-        border-color:{ACCENT} !important;
-        box-shadow:0 0 0 1px {ACCENT} !important;
-      }}
-      div[data-testid="stTextArea"] textarea {{
-        min-height:280px;
-        background:{FIELD} !important;
-        color:{TEXT} !important;
-        border:0 !important;
-        outline:0 !important;
-        box-shadow:none !important;
-      }}
-      div[data-testid="stTextArea"] textarea:focus {{
-        border:0 !important;
-        outline:0 !important;
-        box-shadow:none !important;
-      }}
-      div[data-testid="stTextArea"] textarea::placeholder {{
-        color:{MUTED} !important;
-      }}
-
-      div[data-testid="stFileUploader"] section {{
-        border-radius:14px;
-        padding-top:1rem;
-        padding-bottom:1rem;
-        background:{SURFACE} !important;
-        border-color:{BORDER} !important;
-      }}
-      div[data-testid="stFileUploaderDropzoneInstructions"] {{
-        display:flex !important;
-        flex-direction:column !important;
-        justify-content:center;
-        gap:.28rem !important;
-        line-height:1.25;
-      }}
-      div[data-testid="stFileUploaderDropzoneInstructions"] > div {{
-        display:none !important;
-      }}
-      div[data-testid="stFileUploaderDropzoneInstructions"]::before {{
-        content:"Dosyayı buraya sürükleyin";
-        display:block;
-        font-size:.9rem;
-        font-weight:650;
-        color:{TEXT};
-      }}
-      div[data-testid="stFileUploaderDropzoneInstructions"]::after {{
-        content:"En fazla 10 MB • TXT, DOCX, PDF";
-        display:block;
-        font-size:.78rem;
-        color:{MUTED};
-      }}
-      div[data-testid="stFileUploader"] section button {{
-        position:relative;
-        color:transparent !important;
-        min-width:112px;
-        border-color:rgba(99,102,241,.60) !important;
-        background:rgba(99,102,241,.12) !important;
-      }}
-      div[data-testid="stFileUploader"] section button > * {{
-        display:none !important;
-      }}
-      div[data-testid="stFileUploader"] section button::after {{
-        content:"Belge seç";
-        position:absolute;
-        inset:0;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        color:{ACCENT};
-        font-size:.9rem;
-        font-weight:750;
-      }}
-      div[data-testid="stFileUploader"] section button:hover {{
-        background:rgba(99,102,241,.18) !important;
-        border-color:{ACCENT} !important;
-      }}
-
-      div[data-testid="stButton"] > button[kind="primary"] {{
-        min-height:50px;
-        border-radius:11px;
-        font-weight:780;
-        transition:transform .12s ease, filter .12s ease;
-      }}
-      div[data-testid="stButton"] > button[kind="primary"]:not(:disabled) {{
-        background:{ACCENT};
-        border-color:{ACCENT};
-        color:#fff;
-      }}
-      div[data-testid="stButton"] > button[kind="primary"]:not(:disabled):hover {{
-        filter:brightness(1.07);
-        transform:translateY(-1px);
-      }}
-      div[data-testid="stButton"] > button[kind="primary"]:disabled {{
-        opacity:.72;
-        background:rgba(99,102,241,.08) !important;
-        border-color:rgba(99,102,241,.24) !important;
-        color:{MUTED} !important;
-        cursor:not-allowed;
-      }}
-
-      div[data-testid="stSegmentedControl"] {{
-        margin-bottom:.35rem;
-      }}
-      div[data-testid="stSegmentedControl"] div[role="group"] {{
-        width:fit-content;
-        padding:2px;
-        gap:2px;
-        border:1px solid {BORDER};
-        border-radius:10px;
-        background:{SEGMENT_TRACK} !important;
-      }}
-      div[data-testid="stSegmentedControl"] button {{
-        font-weight:680;
-        border-radius:8px !important;
-        box-shadow:none !important;
-      }}
-      div[data-testid="stSegmentedControl"] button:first-of-type {{
-        background:{paste_bg} !important;
-        border:1px solid {paste_border} !important;
-        color:{paste_color} !important;
-      }}
-      div[data-testid="stSegmentedControl"] button:last-of-type {{
-        background:{upload_bg} !important;
-        border:1px solid {upload_border} !important;
-        color:{upload_color} !important;
-      }}
-      div[data-testid="stSegmentedControl"] button p {{
-        color:inherit !important;
-      }}
-
-      [data-testid="stMetric"] {{
-        background:{SURFACE};
-        border:1px solid {BORDER};
-        border-radius:12px;
-        padding:.65rem .8rem;
-      }}
       details[data-testid="stExpander"] {{
         background:{SURFACE};
         border-color:{BORDER} !important;
+        border-radius:13px !important;
       }}
 
       @media (max-width:700px) {{
-        .block-container {{padding-top:1.15rem;}}
+        .block-container {{padding-top:1.05rem;padding-left:1rem;padding-right:1rem;}}
         .td-subtitle {{display:none;}}
-        .td-mark {{width:38px; height:38px;}}
-        .td-brand {{font-size:1.55rem;}}
+        .td-mark {{width:39px;height:39px;border-radius:11px;}}
+        .td-brand {{font-size:1.5rem;}}
+        .td-note {{padding:.82rem .88rem .82rem 1rem;}}
+        [data-testid="stMetric"] {{min-height:88px;}}
       }}
     </style>
     """,
@@ -660,9 +801,10 @@ analyze = st.button(
     disabled=not can_analyze,
 )
 
-st.caption(
-    "Yerel demo metni kalıcı bir dosyaya yazmak üzere tasarlanmamıştır. "
-    "Bulut sürümü yayınlanmadan önce veri işleme ve gizlilik politikası ayrıca doğrulanacaktır."
+st.markdown(
+    '<div class="td-footnote">Yerel demo metni kalıcı bir dosyaya yazmak üzere tasarlanmamıştır. '
+    'Bulut sürümü yayınlanmadan önce veri işleme ve gizlilik politikası ayrıca doğrulanacaktır.</div>',
+    unsafe_allow_html=True,
 )
 
 if analyze:
