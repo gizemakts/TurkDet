@@ -213,3 +213,89 @@ if hasattr(st, "segmented_control") and not getattr(st.segmented_control, "_turk
 
     _turkdet_segmented_control._turkdet_themed = True
     st.segmented_control = _turkdet_segmented_control
+
+
+# Center TürkDet's document uploader into one coherent dropzone. Streamlit's
+# default layout places the browse button on one side and instructions on the
+# other; a vertical centered composition reads more like a finished product.
+if not getattr(st.file_uploader, "_turkdet_premium_uploader", False):
+    _streamlit_file_uploader = st.file_uploader
+
+    def _turkdet_file_uploader(label, *args, **kwargs):
+        uploaded = _streamlit_file_uploader(label, *args, **kwargs)
+
+        if kwargs.get("key") == "uploaded_document":
+            is_dark = st.session_state.get("theme_mode", "dark") == "dark"
+            icon_bg = "rgba(99,102,241,.13)" if is_dark else "rgba(99,102,241,.08)"
+            icon_border = "rgba(99,102,241,.28)" if is_dark else "rgba(99,102,241,.20)"
+
+            st.markdown(
+                f"""
+                <style>
+                  div[class*="st-key-uploaded_document"] section {{
+                    min-height:178px !important;
+                    display:flex !important;
+                    flex-direction:column !important;
+                    align-items:center !important;
+                    justify-content:center !important;
+                    gap:.72rem !important;
+                    padding:1.25rem 1.35rem !important;
+                    text-align:center !important;
+                  }}
+
+                  div[class*="st-key-uploaded_document"] section::before {{
+                    content:"";
+                    order:1;
+                    width:42px;
+                    height:42px;
+                    flex:0 0 42px;
+                    border-radius:12px;
+                    border:1px solid {icon_border};
+                    background-color:{icon_bg};
+                    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%236366F1' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3Cpath d='M20 15v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4'/%3E%3C/svg%3E");
+                    background-repeat:no-repeat;
+                    background-position:center;
+                    box-shadow:0 7px 18px rgba(99,102,241,.08);
+                  }}
+
+                  div[class*="st-key-uploaded_document"] div[data-testid="stFileUploaderDropzoneInstructions"] {{
+                    order:2 !important;
+                    width:100% !important;
+                    align-items:center !important;
+                    justify-content:center !important;
+                    text-align:center !important;
+                    gap:.38rem !important;
+                  }}
+
+                  div[class*="st-key-uploaded_document"] div[data-testid="stFileUploaderDropzoneInstructions"]::before,
+                  div[class*="st-key-uploaded_document"] div[data-testid="stFileUploaderDropzoneInstructions"]::after {{
+                    text-align:center !important;
+                    width:100% !important;
+                  }}
+
+                  div[class*="st-key-uploaded_document"] section > button {{
+                    order:3 !important;
+                    width:132px !important;
+                    min-width:132px !important;
+                    min-height:42px !important;
+                    margin:0 auto !important;
+                    border-radius:11px !important;
+                    background:rgba(99,102,241,.11) !important;
+                    border:1px solid rgba(99,102,241,.48) !important;
+                    box-shadow:0 7px 18px rgba(99,102,241,.08) !important;
+                  }}
+
+                  div[class*="st-key-uploaded_document"] section > button:hover {{
+                    background:rgba(99,102,241,.17) !important;
+                    border-color:#6366F1 !important;
+                    transform:translateY(-1px);
+                  }}
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        return uploaded
+
+    _turkdet_file_uploader._turkdet_premium_uploader = True
+    st.file_uploader = _turkdet_file_uploader
