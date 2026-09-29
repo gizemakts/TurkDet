@@ -49,7 +49,7 @@ if not getattr(st.text_area, "_turkdet_live_text_area", False):
             key,
             st.session_state.get("pasted_text_buffer", ""),
         )
-        result = live_textarea(
+        return live_textarea(
             value=str(current_value or ""),
             placeholder=str(kwargs.get("placeholder") or ""),
             height=int(kwargs.get("height") or 300),
@@ -61,8 +61,6 @@ if not getattr(st.text_area, "_turkdet_live_text_area", False):
             shadow=shadow,
             key=key,
         )
-        st.session_state[key] = result
-        return result
 
     _turkdet_text_area._turkdet_live_text_area = True
     st.text_area = _turkdet_text_area
