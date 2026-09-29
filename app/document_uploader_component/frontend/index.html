@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; background:transparent; overflow:hidden; }
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:var(--text,#F4F7FB);
+    }
+    button, input { font:inherit; }
+    #root { width:100%; }
+
+    .dropzone {
+      min-height:158px;
+      width:100%;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      padding:22px 18px;
+      border:1px dashed var(--border,rgba(129,140,248,.34));
+      border-radius:16px;
+      background:var(--surface,#111824);
+      box-shadow:0 1px 2px rgba(15,23,42,.04);
+      cursor:pointer;
+      transition:background .16s ease,border-color .16s ease,box-shadow .16s ease;
+      outline:none;
+    }
+    .dropzone:hover,
+    .dropzone.dragging,
+    .dropzone:focus-visible {
+      background:var(--surface-hover,#141C28);
+      border-color:var(--border-hover,rgba(129,140,248,.58));
+      box-shadow:0 8px 24px rgba(99,102,241,.055);
+    }
+
+    .upload-icon {
+      width:42px;
+      height:42px;
+      display:grid;
+      place-items:center;
+      border-radius:12px;
+      border:1px solid var(--icon-border,rgba(129,140,248,.25));
+      background:var(--icon-bg,rgba(99,102,241,.10));
+      color:#6366F1;
+      box-shadow:0 4px 12px rgba(99,102,241,.06);
+    }
+    .upload-icon svg { width:21px; height:21px; }
+
+    .upload-copy {
+      display:flex;
+      align-items:baseline;
+      justify-content:center;
+      flex-wrap:wrap;
+      gap:4px;
+      text-align:center;
+      font-size:14px;
+      line-height:1.45;
+    }
+    .browse-link {
+      appearance:none;
+      border:0;
+      padding:0;
+      background:transparent;
+      color:#6366F1;
+      font-weight:750;
+      cursor:pointer;
+    }
+    .browse-link:hover { text-decoration:underline; text-underline-offset:3px; }
+    .upload-copy span { color:var(--text,#F4F7FB); font-weight:600; }
+    .meta {
+      color:var(--muted,#94A3B8);
+      font-size:12px;
+      line-height:1.4;
+      text-align:center;
+    }
+    input[type="file"] { display:none; }
+
+    .file-row {
+      width:100%;
+      margin-top:12px;
+      min-height:62px;
+      display:none;
+      align-items:center;
+      gap:12px;
+      padding:10px 12px;
+      border:1px solid var(--file-border,rgba(255,255,255,.10));
+      border-radius:12px;
+      background:var(--file-bg,rgba(255,255,255,.035));
+    }
+    .file-row.visible { display:flex; }
+    .file-icon {
+      width:38px;
+      height:38px;
+      flex:0 0 38px;
+      display:grid;
+      place-items:center;
+      border-radius:10px;
+      background:var(--file-icon-bg,rgba(99,102,241,.10));
+      color:#6366F1;
+    }
+    .file-icon svg { width:19px; height:19px; }
+    .file-main { min-width:0; flex:1; }
+    .file-name {
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      color:var(--text,#F4F7FB);
+      font-size:13px;
+      line-height:1.35;
+      font-weight:680;
+    }
+    .file-size {
+      margin-top:3px;
+      color:var(--muted,#94A3B8);
+      font-size:11px;
+      line-height:1.3;
+    }
+    .remove {
+      width:32px;
+      height:32px;
+      flex:0 0 32px;
+      display:grid;
+      place-items:center;
+      border:0;
+      border-radius:8px;
+      background:transparent;
+      color:var(--muted,#94A3B8);
+      cursor:pointer;
+      transition:background .14s ease,color .14s ease;
+    }
+    .remove:hover { background:var(--file-icon-bg,rgba(99,102,241,.10)); color:var(--text,#F4F7FB); }
+    .remove svg { width:17px; height:17px; }
+
+    .error {
+      display:none;
+      margin-top:8px;
+      color:#F97066;
+      font-size:12px;
+      line-height:1.4;
+    }
+    .error.visible { display:block; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Belge yükle">
+      <div class="upload-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 16V4"></path>
+          <path d="m7 9 5-5 5 5"></path>
+          <path d="M20 15v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4"></path>
+        </svg>
+      </div>
+      <div class="upload-copy">
+        <button id="browse" class="browse-link" type="button">Belge seç</button>
+        <span>veya buraya sürükleyip bırakın</span>
+      </div>
+      <div id="meta" class="meta">TXT, DOCX veya PDF • En fazla 10 MB</div>
+      <input id="file-input" type="file" accept=".txt,.docx,.pdf" />
+    </div>
+
+    <div id="file-row" class="file-row">
+      <div class="file-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <path d="M14 2v6h6"></path>
+          <path d="M8 13h8"></path>
+          <path d="M8 17h5"></path>
+        </svg>
+      </div>
+      <div class="file-main">
+        <div id="file-name" class="file-name"></div>
+        <div id="file-size" class="file-size"></div>
+      </div>
+      <button id="remove" class="remove" type="button" aria-label="Belgeyi kaldır">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+          <path d="M18 6 6 18"></path>
+          <path d="m6 6 12 12"></path>
+        </svg>
+      </button>
+    </div>
+    <div id="error" class="error"></div>
+  </div>
+
+  <script>
+    const SET_COMPONENT_VALUE = "streamlit:setComponentValue";
+    const RENDER = "streamlit:render";
+    const COMPONENT_READY = "streamlit:componentReady";
+    const SET_FRAME_HEIGHT = "streamlit:setFrameHeight";
+
+    const root = document.getElementById("root");
+    const dropzone = document.getElementById("dropzone");
+    const browse = document.getElementById("browse");
+    const input = document.getElementById("file-input");
+    const fileRow = document.getElementById("file-row");
+    const fileName = document.getElementById("file-name");
+    const fileSize = document.getElementById("file-size");
+    const remove = document.getElementById("remove");
+    const error = document.getElementById("error");
+    const meta = document.getElementById("meta");
+
+    let maxSizeMb = 10;
+    let acceptedExtensions = [".txt", ".docx", ".pdf"];
+
+    function sendMessage(type, data) {
+      window.parent.postMessage(Object.assign({
+        isStreamlitMessage: true,
+        type: type,
+      }, data || {}), "*");
+    }
+
+    function setComponentValue(value) {
+      sendMessage(SET_COMPONENT_VALUE, { value: value, dataType: "json" });
+    }
+
+    function syncHeight() {
+      requestAnimationFrame(() => {
+        sendMessage(SET_FRAME_HEIGHT, { height: Math.ceil(root.getBoundingClientRect().height) + 2 });
+      });
+    }
+
+    function formatBytes(bytes) {
+      const value = Number(bytes) || 0;
+      if (value < 1024) return `${value} B`;
+      if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+      return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function showError(message) {
+      error.textContent = message;
+      error.classList.add("visible");
+      syncHeight();
+    }
+
+    function clearError() {
+      error.textContent = "";
+      error.classList.remove("visible");
+    }
+
+    function showFile(name, size) {
+      fileName.textContent = name || "Belge";
+      fileSize.textContent = formatBytes(size);
+      fileRow.classList.add("visible");
+      syncHeight();
+    }
+
+    function hideFile() {
+      fileName.textContent = "";
+      fileSize.textContent = "";
+      fileRow.classList.remove("visible");
+      syncHeight();
+    }
+
+    function bytesToBase64(buffer) {
+      const bytes = new Uint8Array(buffer);
+      const chunk = 0x8000;
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunk, bytes.length)));
+      }
+      return btoa(binary);
+    }
+
+    async function handleFile(file) {
+      clearError();
+      if (!file) return;
+
+      const lowerName = String(file.name || "").toLowerCase();
+      const allowed = acceptedExtensions.some((ext) => lowerName.endsWith(ext));
+      if (!allowed) {
+        showError("Yalnızca TXT, DOCX veya PDF dosyaları yüklenebilir.");
+        input.value = "";
+        return;
+      }
+
+      const maxBytes = maxSizeMb * 1024 * 1024;
+      if (file.size > maxBytes) {
+        showError(`Dosya boyutu ${maxSizeMb} MB sınırını aşıyor.`);
+        input.value = "";
+        return;
+      }
+
+      showFile(file.name, file.size);
+      try {
+        const buffer = await file.arrayBuffer();
+        const dataBase64 = bytesToBase64(buffer);
+        setComponentValue({
+          action: "selected",
+          name: file.name,
+          size: file.size,
+          mime_type: file.type || "",
+          data_base64: dataBase64,
+        });
+      } catch (err) {
+        hideFile();
+        showError("Dosya okunamadı. Lütfen yeniden seçin.");
+        input.value = "";
+      }
+    }
+
+    function openPicker(event) {
+      if (event) event.stopPropagation();
+      input.click();
+    }
+
+    browse.addEventListener("click", openPicker);
+    dropzone.addEventListener("click", (event) => {
+      if (event.target !== browse) openPicker(event);
+    });
+    dropzone.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openPicker(event);
+      }
+    });
+
+    input.addEventListener("change", () => handleFile(input.files && input.files[0]));
+
+    ["dragenter", "dragover"].forEach((name) => {
+      dropzone.addEventListener(name, (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        dropzone.classList.add("dragging");
+      });
+    });
+    ["dragleave", "drop"].forEach((name) => {
+      dropzone.addEventListener(name, (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        dropzone.classList.remove("dragging");
+      });
+    });
+    dropzone.addEventListener("drop", (event) => {
+      const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+      handleFile(file);
+    });
+
+    remove.addEventListener("click", () => {
+      input.value = "";
+      clearError();
+      hideFile();
+      setComponentValue({ action: "cleared" });
+    });
+
+    function applyTheme(mode) {
+      const dark = mode !== "light";
+      const vars = dark ? {
+        "--text":"#F4F7FB",
+        "--muted":"#94A3B8",
+        "--surface":"#111824",
+        "--surface-hover":"#141C28",
+        "--border":"rgba(129,140,248,.34)",
+        "--border-hover":"rgba(129,140,248,.58)",
+        "--icon-bg":"rgba(99,102,241,.10)",
+        "--icon-border":"rgba(129,140,248,.25)",
+        "--file-bg":"rgba(255,255,255,.035)",
+        "--file-border":"rgba(255,255,255,.10)",
+        "--file-icon-bg":"rgba(99,102,241,.10)",
+      } : {
+        "--text":"#111827",
+        "--muted":"#667085",
+        "--surface":"#FFFFFF",
+        "--surface-hover":"#FCFCFF",
+        "--border":"rgba(99,102,241,.26)",
+        "--border-hover":"rgba(99,102,241,.48)",
+        "--icon-bg":"rgba(99,102,241,.06)",
+        "--icon-border":"rgba(99,102,241,.18)",
+        "--file-bg":"#FAFBFC",
+        "--file-border":"rgba(15,23,42,.09)",
+        "--file-icon-bg":"rgba(99,102,241,.06)",
+      };
+      Object.entries(vars).forEach(([key, value]) => document.documentElement.style.setProperty(key, value));
+    }
+
+    function applyProps(props) {
+      applyTheme(props.theme_mode || "dark");
+      maxSizeMb = Number(props.max_size_mb) || 10;
+      acceptedExtensions = Array.isArray(props.accepted_extensions) && props.accepted_extensions.length
+        ? props.accepted_extensions.map((value) => String(value).toLowerCase())
+        : [".txt", ".docx", ".pdf"];
+      input.accept = acceptedExtensions.join(",");
+      meta.textContent = `TXT, DOCX veya PDF • En fazla ${maxSizeMb} MB`;
+
+      const selectedName = typeof props.selected_name === "string" ? props.selected_name : "";
+      const selectedSize = Number(props.selected_size) || 0;
+      if (selectedName) showFile(selectedName, selectedSize);
+      else hideFile();
+      syncHeight();
+    }
+
+    window.addEventListener("message", (event) => {
+      if (event.data && event.data.type === RENDER) {
+        applyProps(event.data.args || {});
+      }
+    });
+
+    sendMessage(COMPONENT_READY, { apiVersion: 1 });
+    syncHeight();
+  </script>
+</body>
+</html>
