@@ -81,7 +81,7 @@ st.markdown(
         line-height:1.55;
       }
       .td-upload-copy {
-        margin:.25rem 0 .75rem;
+        margin:.5rem 0 .75rem;
         font-size:.88rem;
         opacity:.67;
       }
@@ -157,12 +157,23 @@ st.markdown(
         padding-bottom:1rem;
       }
 
-      /* Streamlit's uploader button is English by default; localize only its visible label. */
+      /* Localize Streamlit's uploader button without leaving the original label visible. */
       div[data-testid="stFileUploader"] button {
-        font-size:0 !important;
+        position:relative;
+        color:transparent !important;
+        min-width:112px;
+      }
+      div[data-testid="stFileUploader"] button > * {
+        display:none !important;
       }
       div[data-testid="stFileUploader"] button::after {
         content:"Belge seç";
+        position:absolute;
+        inset:0;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:var(--text-color, #fafafa);
         font-size:.9rem;
         font-weight:700;
       }
@@ -186,8 +197,11 @@ st.markdown(
         opacity:.48;
       }
 
-      div[data-testid="stTabs"] button[role="tab"] {
-        font-weight:650;
+      div[data-testid="stSegmentedControl"] {
+        margin-bottom:.35rem;
+      }
+      div[data-testid="stSegmentedControl"] button {
+        font-weight:680;
       }
 
       @media (max-width: 700px) {
@@ -223,21 +237,29 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-input_tab, upload_tab = st.tabs(["Metin yapıştır", "Belge yükle"])
+input_mode = st.segmented_control(
+    "Giriş yöntemi",
+    options=["Metin yapıştır", "Belge yükle"],
+    default="Metin yapıştır",
+    selection_mode="single",
+    label_visibility="collapsed",
+    key="input_mode",
+)
 
-pasted_text = ""
-uploaded_text = ""
+text = ""
 uploaded_name = ""
 
-with input_tab:
+if input_mode == "Metin yapıştır":
     pasted_text = st.text_area(
         "Türkçe metin",
         height=300,
         placeholder="Analiz etmek istediğiniz Türkçe metni buraya yapıştırın…",
         label_visibility="collapsed",
+        key="pasted_text",
     )
+    text = pasted_text.strip()
 
-with upload_tab:
+elif input_mode == "Belge yükle":
     st.markdown(
         '<div class="td-upload-copy">Belgenizi buraya bırakın veya bilgisayarınızdan seçin.</div>',
         unsafe_allow_html=True,
@@ -247,19 +269,19 @@ with upload_tab:
         type=["txt", "docx", "pdf"],
         help="Taranmış/görüntü tabanlı PDF'lerde OCR henüz etkin değildir.",
         label_visibility="collapsed",
+        key="uploaded_document",
     )
     if uploaded is not None:
         uploaded_name = uploaded.name
         try:
-            uploaded_text = extract_text(uploaded.name, uploaded.getvalue())
+            text = extract_text(uploaded.name, uploaded.getvalue()).strip()
         except DocumentParseError as exc:
+            text = ""
             st.error(str(exc))
         else:
             st.success(f"{uploaded.name} belgesinden metin çıkarıldı.")
             with st.expander("Çıkarılan metni önizle"):
-                st.write(uploaded_text[:8000])
-
-text = pasted_text.strip() or uploaded_text.strip()
+                st.write(text[:8000])
 
 if text:
     stats = get_document_stats(text)
