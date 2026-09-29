@@ -17,10 +17,24 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+
+# ---------------------------------------------------------------------------
+# Persistent input state
+# ---------------------------------------------------------------------------
+# Streamlit removes widget state when a conditional widget disappears. Keep
+# shadow buffers so an accidental source switch never deletes the user's work.
+st.session_state.setdefault("pasted_text_buffer", "")
+st.session_state.setdefault("uploaded_text_buffer", "")
+st.session_state.setdefault("uploaded_name_buffer", "")
+
+
+def _sync_pasted_text() -> None:
+    st.session_state["pasted_text_buffer"] = st.session_state.get("pasted_text_widget", "")
+
+
 st.markdown(
     """
     <style>
-      /* Streamlit development chrome: keep the user-facing screen product-like. */
       header[data-testid="stHeader"],
       [data-testid="stToolbar"],
       [data-testid="stDecoration"],
@@ -157,7 +171,6 @@ st.markdown(
         padding-bottom:1rem;
       }
 
-      /* Localize Streamlit's uploader button without leaving the original label visible. */
       div[data-testid="stFileUploader"] button {
         position:relative;
         color:transparent !important;
@@ -197,12 +210,8 @@ st.markdown(
         opacity:.48;
       }
 
-      div[data-testid="stSegmentedControl"] {
-        margin-bottom:.35rem;
-      }
-      div[data-testid="stSegmentedControl"] button {
-        font-weight:680;
-      }
+      div[data-testid="stSegmentedControl"] {margin-bottom:.35rem;}
+      div[data-testid="stSegmentedControl"] button {font-weight:680;}
 
       @media (max-width: 700px) {
         .block-container {padding-top:1.25rem;}
@@ -250,13 +259,20 @@ text = ""
 uploaded_name = ""
 
 if input_mode == "Metin yapıştır":
+    # Restore the saved draft whenever this control is rendered again.
+    if "pasted_text_widget" not in st.session_state:
+        st.session_state["pasted_text_widget"] = st.session_state["pasted_text_buffer"]
+
     pasted_text = st.text_area(
         "Türkçe metin",
         height=300,
         placeholder="Analiz etmek istediğiniz Türkçe metni buraya yapıştırın…",
         label_visibility="collapsed",
-        key="pasted_text",
+        key="pasted_text_widget",
+        on_change=_sync_pasted_text,
     )
+    # Also save on every render so no interaction can lose the latest value.
+    st.session_state["pasted_text_buffer"] = pasted_text
     text = pasted_text.strip()
 
 elif input_mode == "Belge yükle":
@@ -271,17 +287,30 @@ elif input_mode == "Belge yükle":
         label_visibility="collapsed",
         key="uploaded_document",
     )
+
     if uploaded is not None:
         uploaded_name = uploaded.name
         try:
-            text = extract_text(uploaded.name, uploaded.getvalue()).strip()
+            extracted_text = extract_text(uploaded.name, uploaded.getvalue()).strip()
         except DocumentParseError as exc:
-            text = ""
+            st.session_state["uploaded_text_buffer"] = ""
+            st.session_state["uploaded_name_buffer"] = ""
             st.error(str(exc))
         else:
+            st.session_state["uploaded_text_buffer"] = extracted_text
+            st.session_state["uploaded_name_buffer"] = uploaded.name
+            text = extracted_text
             st.success(f"{uploaded.name} belgesinden metin çıkarıldı.")
             with st.expander("Çıkarılan metni önizle"):
                 st.write(text[:8000])
+    elif st.session_state["uploaded_text_buffer"]:
+        # The uploader widget itself may be recreated after a source switch, but
+        # the already extracted document remains available in the session.
+        text = st.session_state["uploaded_text_buffer"]
+        uploaded_name = st.session_state["uploaded_name_buffer"]
+        st.info(f"Son yüklenen belge korunuyor: {uploaded_name}")
+        with st.expander("Çıkarılan metni önizle"):
+            st.write(text[:8000])
 
 if text:
     stats = get_document_stats(text)
