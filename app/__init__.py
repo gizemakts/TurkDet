@@ -17,6 +17,9 @@ if not getattr(st.markdown, "_turkdet_markdown", False):
         if isinstance(body, str) and "Belge özeti yazdıkça güncellenir." in body:
             return None
 
+        if isinstance(body, str) and "Belgenizi buraya bırakın veya bilgisayarınızdan seçin." in body:
+            return None
+
         if isinstance(body, str) and body.strip() == "#### Belge özeti":
             return None
 
@@ -24,13 +27,17 @@ if not getattr(st.markdown, "_turkdet_markdown", False):
             _streamlit_markdown(
                 """
                 <style>
+                  div[data-testid="stElementContainer"]:has(.td-summary-grid) {
+                    margin-top:-.8rem !important;
+                  }
+
                   .td-summary-grid {
-                    margin-top:.9rem !important;
-                    margin-bottom:.65rem !important;
+                    margin-top:0 !important;
+                    margin-bottom:.55rem !important;
                   }
 
                   div[data-testid="stButton"] > button[kind="primary"] {
-                    margin-top:1rem !important;
+                    margin-top:.85rem !important;
                   }
                 </style>
                 """,
@@ -219,9 +226,10 @@ if hasattr(st, "segmented_control") and not getattr(st.segmented_control, "_turk
     st.segmented_control = _turkdet_segmented_control
 
 
-# Center TürkDet's document uploader into one coherent dropzone. Streamlit's
-# default layout places the browse button on one side and instructions on the
-# other; a vertical centered composition reads more like a finished product.
+# Refine TürkDet's native Streamlit uploader into a compact, premium dropzone.
+# The visual hierarchy follows the standard product pattern: icon, instruction,
+# file constraints, then a clear browse action. The native upload behavior stays
+# intact; only this keyed uploader receives the presentation layer below.
 if not getattr(st.file_uploader, "_turkdet_premium_uploader", False):
     _streamlit_file_uploader = st.file_uploader
 
@@ -230,69 +238,157 @@ if not getattr(st.file_uploader, "_turkdet_premium_uploader", False):
 
         if kwargs.get("key") == "uploaded_document":
             is_dark = st.session_state.get("theme_mode", "dark") == "dark"
-            icon_bg = "rgba(99,102,241,.13)" if is_dark else "rgba(99,102,241,.08)"
-            icon_border = "rgba(99,102,241,.28)" if is_dark else "rgba(99,102,241,.20)"
+            if is_dark:
+                drop_bg = "#111824"
+                drop_hover = "#141C2A"
+                drop_border = "rgba(99,102,241,.40)"
+                drop_border_hover = "rgba(99,102,241,.68)"
+                icon_bg = "rgba(99,102,241,.12)"
+                icon_border = "rgba(99,102,241,.30)"
+                title_color = "#F4F7FB"
+                meta_color = "#97A3B6"
+                button_bg = "rgba(99,102,241,.12)"
+                button_hover = "rgba(99,102,241,.18)"
+            else:
+                drop_bg = "#FFFFFF"
+                drop_hover = "#FAFBFF"
+                drop_border = "rgba(99,102,241,.30)"
+                drop_border_hover = "rgba(99,102,241,.58)"
+                icon_bg = "rgba(99,102,241,.07)"
+                icon_border = "rgba(99,102,241,.20)"
+                title_color = "#111827"
+                meta_color = "#667085"
+                button_bg = "rgba(99,102,241,.07)"
+                button_hover = "rgba(99,102,241,.12)"
 
             st.markdown(
                 f"""
                 <style>
+                  div[class*="st-key-uploaded_document"] [data-testid="stFileUploaderDropzone"],
                   div[class*="st-key-uploaded_document"] section {{
-                    min-height:178px !important;
+                    min-height:156px !important;
+                    position:relative !important;
                     display:flex !important;
                     flex-direction:column !important;
                     align-items:center !important;
                     justify-content:center !important;
-                    gap:.72rem !important;
-                    padding:1.25rem 1.35rem !important;
+                    gap:.48rem !important;
+                    padding:1.05rem 1.25rem !important;
                     text-align:center !important;
+                    background:{drop_bg} !important;
+                    border:1px dashed {drop_border} !important;
+                    border-radius:16px !important;
+                    box-shadow:0 10px 28px rgba(15,23,42,.055) !important;
+                    transition:background .16s ease,border-color .16s ease,box-shadow .16s ease !important;
+                  }}
+
+                  div[class*="st-key-uploaded_document"] [data-testid="stFileUploaderDropzone"]:hover,
+                  div[class*="st-key-uploaded_document"] section:hover {{
+                    background:{drop_hover} !important;
+                    border-color:{drop_border_hover} !important;
+                    box-shadow:0 12px 30px rgba(99,102,241,.075) !important;
+                  }}
+
+                  div[class*="st-key-uploaded_document"] section > * {{
+                    order:4;
                   }}
 
                   div[class*="st-key-uploaded_document"] section::before {{
                     content:"";
                     order:1;
-                    width:42px;
-                    height:42px;
-                    flex:0 0 42px;
+                    width:40px;
+                    height:40px;
+                    flex:0 0 40px;
                     border-radius:12px;
                     border:1px solid {icon_border};
                     background-color:{icon_bg};
-                    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%236366F1' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3Cpath d='M20 15v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4'/%3E%3C/svg%3E");
+                    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='21' height='21' viewBox='0 0 24 24' fill='none' stroke='%236366F1' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3Cpath d='M20 15v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4'/%3E%3C/svg%3E");
                     background-repeat:no-repeat;
                     background-position:center;
-                    box-shadow:0 7px 18px rgba(99,102,241,.08);
+                    box-shadow:0 6px 16px rgba(99,102,241,.08);
                   }}
 
                   div[class*="st-key-uploaded_document"] div[data-testid="stFileUploaderDropzoneInstructions"] {{
                     order:2 !important;
                     width:100% !important;
+                    display:flex !important;
+                    flex-direction:column !important;
                     align-items:center !important;
                     justify-content:center !important;
+                    gap:.2rem !important;
+                    margin:0 !important;
+                    padding:0 !important;
                     text-align:center !important;
-                    gap:.38rem !important;
                   }}
 
-                  div[class*="st-key-uploaded_document"] div[data-testid="stFileUploaderDropzoneInstructions"]::before,
-                  div[class*="st-key-uploaded_document"] div[data-testid="stFileUploaderDropzoneInstructions"]::after {{
-                    text-align:center !important;
+                  div[class*="st-key-uploaded_document"] div[data-testid="stFileUploaderDropzoneInstructions"] > div,
+                  div[class*="st-key-uploaded_document"] div[data-testid="stFileUploaderDropzoneInstructions"] > svg {{
+                    display:none !important;
+                  }}
+
+                  div[class*="st-key-uploaded_document"] div[data-testid="stFileUploaderDropzoneInstructions"]::before {{
+                    content:"Belgenizi buraya sürükleyin" !important;
+                    display:block !important;
                     width:100% !important;
+                    color:{title_color} !important;
+                    font-size:.88rem !important;
+                    font-weight:720 !important;
+                    line-height:1.3 !important;
+                    text-align:center !important;
                   }}
 
-                  div[class*="st-key-uploaded_document"] section > button {{
+                  div[class*="st-key-uploaded_document"] div[data-testid="stFileUploaderDropzoneInstructions"]::after {{
+                    content:"TXT, DOCX veya PDF • En fazla 10 MB" !important;
+                    display:block !important;
+                    width:100% !important;
+                    color:{meta_color} !important;
+                    font-size:.73rem !important;
+                    font-weight:450 !important;
+                    line-height:1.35 !important;
+                    text-align:center !important;
+                  }}
+
+                  div[class*="st-key-uploaded_document"] section > button,
+                  div[class*="st-key-uploaded_document"] section > div:has(> button),
+                  div[class*="st-key-uploaded_document"] section > div:has(button[kind="secondary"]) {{
                     order:3 !important;
-                    width:132px !important;
-                    min-width:132px !important;
-                    min-height:42px !important;
-                    margin:0 auto !important;
-                    border-radius:11px !important;
-                    background:rgba(99,102,241,.11) !important;
-                    border:1px solid rgba(99,102,241,.48) !important;
-                    box-shadow:0 7px 18px rgba(99,102,241,.08) !important;
+                    margin:.18rem auto 0 !important;
                   }}
 
-                  div[class*="st-key-uploaded_document"] section > button:hover {{
-                    background:rgba(99,102,241,.17) !important;
+                  div[class*="st-key-uploaded_document"] section button {{
+                    position:relative !important;
+                    width:118px !important;
+                    min-width:118px !important;
+                    min-height:38px !important;
+                    padding:0 !important;
+                    border-radius:10px !important;
+                    border:1px solid rgba(99,102,241,.46) !important;
+                    background:{button_bg} !important;
+                    color:transparent !important;
+                    box-shadow:none !important;
+                    transition:background .15s ease,border-color .15s ease,transform .15s ease !important;
+                  }}
+
+                  div[class*="st-key-uploaded_document"] section button > * {{
+                    opacity:0 !important;
+                  }}
+
+                  div[class*="st-key-uploaded_document"] section button::after {{
+                    content:"Belge seç" !important;
+                    position:absolute !important;
+                    inset:0 !important;
+                    display:flex !important;
+                    align-items:center !important;
+                    justify-content:center !important;
+                    color:#6366F1 !important;
+                    font-size:.81rem !important;
+                    font-weight:760 !important;
+                  }}
+
+                  div[class*="st-key-uploaded_document"] section button:hover {{
+                    background:{button_hover} !important;
                     border-color:#6366F1 !important;
-                    transform:translateY(-1px);
+                    transform:translateY(-1px) !important;
                   }}
                 </style>
                 """,
