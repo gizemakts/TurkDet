@@ -65,6 +65,8 @@ def _render_document(paragraphs: list[str], caption: str) -> None:
 
 
 is_dark = st.session_state["theme_mode"] == "dark"
+input_mode_state = st.session_state.get("input_mode", "Metin yapıştır")
+paste_selected = input_mode_state != "Belge yükle"
 
 if is_dark:
     BG = "#0E1117"
@@ -75,6 +77,10 @@ if is_dark:
     BORDER = "rgba(255,255,255,.12)"
     SOFT = "rgba(255,255,255,.045)"
     TOGGLE_TRACK = "linear-gradient(135deg,#1B2230,#252D40)"
+    SEGMENT_TRACK = "#151A23"
+    SHORT_WARNING_BG = "rgba(245,158,11,.10)"
+    SHORT_WARNING_BORDER = "rgba(245,158,11,.28)"
+    SHORT_WARNING_TEXT = "#FCD34D"
 else:
     BG = "#FFFFFF"
     SURFACE = "#F6F7FB"
@@ -84,6 +90,17 @@ else:
     BORDER = "rgba(15,23,42,.14)"
     SOFT = "rgba(15,23,42,.035)"
     TOGGLE_TRACK = "linear-gradient(135deg,#E8EEFF,#EEF2FF)"
+    SEGMENT_TRACK = "#F4F6FA"
+    SHORT_WARNING_BG = "#FFF8E8"
+    SHORT_WARNING_BORDER = "rgba(217,119,6,.25)"
+    SHORT_WARNING_TEXT = "#92400E"
+
+paste_bg = "rgba(99,102,241,.16)" if paste_selected else "transparent"
+paste_border = "rgba(99,102,241,.48)" if paste_selected else "transparent"
+paste_color = ACCENT if paste_selected else TEXT
+upload_bg = "transparent" if paste_selected else "rgba(99,102,241,.16)"
+upload_border = "transparent" if paste_selected else "rgba(99,102,241,.48)"
+upload_color = TEXT if paste_selected else ACCENT
 
 SUN_ICON = (
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' "
@@ -179,7 +196,6 @@ st.markdown(
         margin:.2rem 0 1.5rem;
       }}
 
-      /* Premium vector sun/moon theme switch. */
       div[class*="st-key-theme_toggle"] {{
         display:flex;
         justify-content:flex-end;
@@ -248,9 +264,6 @@ st.markdown(
         background-repeat:no-repeat;
         background-position:center;
       }}
-      div[class*="st-key-theme_toggle"] button:active p {{
-        box-shadow:0 1px 3px rgba(0,0,0,.18) !important;
-      }}
 
       .td-kicker {{
         font-size:.76rem;
@@ -284,6 +297,19 @@ st.markdown(
         margin:.85rem 0 1.15rem;
         font-size:.88rem;
         line-height:1.5;
+      }}
+      .td-short-warning {{
+        border:1px solid {SHORT_WARNING_BORDER};
+        background:{SHORT_WARNING_BG};
+        color:{SHORT_WARNING_TEXT} !important;
+        border-radius:12px;
+        padding:.9rem 1rem;
+        margin:.8rem 0 1rem;
+        font-size:.9rem;
+        line-height:1.5;
+      }}
+      .td-short-warning strong {{
+        color:inherit !important;
       }}
 
       .td-score-card {{
@@ -346,19 +372,32 @@ st.markdown(
         margin-bottom:.35rem;
       }}
 
+      div[data-testid="stTextArea"] [data-baseweb="textarea"] {{
+        border:1px solid {BORDER} !important;
+        border-radius:14px !important;
+        background:{FIELD} !important;
+        box-shadow:none !important;
+        overflow:hidden;
+      }}
+      div[data-testid="stTextArea"] [data-baseweb="textarea"]:focus-within {{
+        border-color:{ACCENT} !important;
+        box-shadow:0 0 0 1px {ACCENT} !important;
+      }}
       div[data-testid="stTextArea"] textarea {{
-        border-radius:14px;
         min-height:280px;
         background:{FIELD} !important;
         color:{TEXT} !important;
-        border-color:{BORDER} !important;
+        border:0 !important;
+        outline:0 !important;
+        box-shadow:none !important;
+      }}
+      div[data-testid="stTextArea"] textarea:focus {{
+        border:0 !important;
+        outline:0 !important;
+        box-shadow:none !important;
       }}
       div[data-testid="stTextArea"] textarea::placeholder {{
         color:{MUTED} !important;
-      }}
-      div[data-testid="stTextArea"] textarea:focus {{
-        border-color:{ACCENT} !important;
-        box-shadow:0 0 0 1px {ACCENT} !important;
       }}
 
       div[data-testid="stFileUploader"] section {{
@@ -367,6 +406,13 @@ st.markdown(
         padding-bottom:1rem;
         background:{SURFACE} !important;
         border-color:{BORDER} !important;
+      }}
+      div[data-testid="stFileUploaderDropzoneInstructions"] {{
+        display:flex !important;
+        flex-direction:column !important;
+        justify-content:center;
+        gap:.28rem !important;
+        line-height:1.25;
       }}
       div[data-testid="stFileUploaderDropzoneInstructions"] > div {{
         display:none !important;
@@ -377,7 +423,6 @@ st.markdown(
         font-size:.9rem;
         font-weight:650;
         color:{TEXT};
-        margin-bottom:.15rem;
       }}
       div[data-testid="stFileUploaderDropzoneInstructions"]::after {{
         content:"En fazla 10 MB • TXT, DOCX, PDF";
@@ -434,10 +479,34 @@ st.markdown(
         cursor:not-allowed;
       }}
 
-      div[data-testid="stSegmentedControl"] {{margin-bottom:.35rem;}}
+      div[data-testid="stSegmentedControl"] {{
+        margin-bottom:.35rem;
+      }}
+      div[data-testid="stSegmentedControl"] div[role="group"] {{
+        width:fit-content;
+        padding:2px;
+        gap:2px;
+        border:1px solid {BORDER};
+        border-radius:10px;
+        background:{SEGMENT_TRACK} !important;
+      }}
       div[data-testid="stSegmentedControl"] button {{
         font-weight:680;
-        color:{TEXT} !important;
+        border-radius:8px !important;
+        box-shadow:none !important;
+      }}
+      div[data-testid="stSegmentedControl"] button:first-of-type {{
+        background:{paste_bg} !important;
+        border:1px solid {paste_border} !important;
+        color:{paste_color} !important;
+      }}
+      div[data-testid="stSegmentedControl"] button:last-of-type {{
+        background:{upload_bg} !important;
+        border:1px solid {upload_border} !important;
+        color:{upload_color} !important;
+      }}
+      div[data-testid="stSegmentedControl"] button p {{
+        color:inherit !important;
       }}
 
       [data-testid="stMetric"] {{
@@ -574,10 +643,12 @@ if text:
     c4.metric("Karakter", f"{stats.characters:,}".replace(",", "."))
 
     if stats.words < MIN_WORDS:
-        st.warning(
-            f"Analiz için en az {MIN_WORDS} kelimelik bir metin gerekli. "
-            "Bu sınır geliştirme aşamasındaki geçici bir arayüz korumasıdır; "
-            "bilimsel geçerlilik eşiği değildir ve nihai doğrulama sonrasında güncellenecektir."
+        st.markdown(
+            f'<div class="td-short-warning"><strong>Metin çok kısa.</strong> '
+            f'Analiz için en az {MIN_WORDS} kelimelik bir metin gerekli. '
+            'Bu sınır geliştirme aşamasındaki geçici bir arayüz korumasıdır; '
+            'bilimsel geçerlilik eşiği değildir ve nihai doğrulama sonrasında güncellenecektir.</div>',
+            unsafe_allow_html=True,
         )
 
 can_analyze = bool(text) and stats is not None and stats.words >= MIN_WORDS
