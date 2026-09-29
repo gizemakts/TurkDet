@@ -299,7 +299,7 @@ if input_mode == "Metin yapıştır":
     st.session_state["pasted_text_buffer"] = pasted_text
     text = pasted_text.strip()
     st.markdown(
-        '<div class="td-help">Ctrl+Enter gerekmez. Metin alanından çıktığınızda sayaçlar otomatik güncellenir; Analizi Başlat düğmesi en son metni kullanır.</div>',
+        '<div class="td-help">Belge özeti, girilen metin hakkında hızlı bilgi verir. TürkDet model analizi yalnızca <strong>Analizi Başlat</strong> düğmesine bastığınızda çalışır.</div>',
         unsafe_allow_html=True,
     )
 
