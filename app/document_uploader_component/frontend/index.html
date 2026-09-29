@@ -206,6 +206,7 @@
 
     let maxSizeMb = 10;
     let acceptedExtensions = [".txt", ".docx", ".pdf"];
+    let hasLocalSelection = false;
 
     function sendMessage(type, data) {
       window.parent.postMessage(Object.assign({
@@ -285,6 +286,7 @@
         return;
       }
 
+      hasLocalSelection = true;
       showFile(file.name, file.size);
       try {
         const buffer = await file.arrayBuffer();
@@ -297,6 +299,7 @@
           data_base64: dataBase64,
         });
       } catch (err) {
+        hasLocalSelection = false;
         hideFile();
         showError("Dosya okunamadı. Lütfen yeniden seçin.");
         input.value = "";
@@ -343,6 +346,7 @@
     remove.addEventListener("click", () => {
       input.value = "";
       clearError();
+      hasLocalSelection = false;
       hideFile();
       setComponentValue({ action: "cleared" });
     });
@@ -388,8 +392,11 @@
 
       const selectedName = typeof props.selected_name === "string" ? props.selected_name : "";
       const selectedSize = Number(props.selected_size) || 0;
-      if (selectedName) showFile(selectedName, selectedSize);
-      else hideFile();
+      if (selectedName) {
+        showFile(selectedName, selectedSize);
+      } else if (!hasLocalSelection) {
+        hideFile();
+      }
       syncHeight();
     }
 
