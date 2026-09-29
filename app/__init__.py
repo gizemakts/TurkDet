@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from app.live_textarea_component import live_textarea
+
 
 # Remove the native hover tooltip from TürkDet's icon-only theme switch.
 if not getattr(st.button, "_turkdet_button", False):
@@ -18,110 +20,51 @@ if not getattr(st.button, "_turkdet_button", False):
     st.button = _turkdet_button
 
 
-# Hide Streamlit's native Ctrl+Enter instruction and resize affordance from
-# TürkDet's main text input. Streamlit 1.64 can execute trusted JavaScript via
-# st.html directly in the app DOM, so the lightweight document counters can be
-# updated on each browser input event without rerunning detector inference.
-if not getattr(st.text_area, "_turkdet_text_area", False):
+# TürkDet's main pasted-text field must update while the user types. Streamlit's
+# native multiline text_area only commits on blur/Ctrl+Enter, so route this one
+# widget through a small bidirectional component. Other text areas stay native.
+if not getattr(st.text_area, "_turkdet_live_text_area", False):
     _streamlit_text_area = st.text_area
 
-    def _turkdet_text_area(*args, **kwargs):
-        value = _streamlit_text_area(*args, **kwargs)
+    def _turkdet_text_area(label, *args, **kwargs):
+        key = kwargs.get("key")
+        if key != "pasted_text_widget":
+            return _streamlit_text_area(label, *args, **kwargs)
 
-        if kwargs.get("key") == "pasted_text_widget":
-            st.markdown(
-                """
-                <style>
-                  div[data-testid="stTextArea"] [data-testid="InputInstructions"],
-                  div[data-testid="stTextArea"] small {
-                    display:none !important;
-                    visibility:hidden !important;
-                  }
+        is_dark = st.session_state.get("theme_mode", "dark") == "dark"
+        if is_dark:
+            field_color = "#101826"
+            text_color = "#F4F7FB"
+            muted_color = "#97A3B6"
+            border_color = "rgba(255,255,255,.16)"
+            shadow = "0 8px 24px rgba(0,0,0,.14)"
+        else:
+            field_color = "#FFFFFF"
+            text_color = "#111827"
+            muted_color = "#667085"
+            border_color = "rgba(15,23,42,.15)"
+            shadow = "0 8px 22px rgba(15,23,42,.055)"
 
-                  div[data-testid="stTextArea"] textarea {
-                    resize:none !important;
-                  }
-                </style>
-                """,
-                unsafe_allow_html=True,
-            )
+        current_value = st.session_state.get(
+            key,
+            st.session_state.get("pasted_text_buffer", ""),
+        )
+        result = live_textarea(
+            value=str(current_value or ""),
+            placeholder=str(kwargs.get("placeholder") or ""),
+            height=int(kwargs.get("height") or 300),
+            debounce_ms=180,
+            field_color=field_color,
+            text_color=text_color,
+            muted_color=muted_color,
+            border_color=border_color,
+            shadow=shadow,
+            key=key,
+        )
+        st.session_state[key] = result
+        return result
 
-            st.html(
-                """
-                <script>
-                (() => {
-                  let attachedTextarea = null;
-
-                  const setStat = (id, value) => {
-                    const node = document.getElementById(id);
-                    if (node) node.textContent = Number(value).toLocaleString('tr-TR');
-                  };
-
-                  const computeStats = (rawValue) => {
-                    const cleaned = (rawValue || '').trim();
-                    if (!cleaned) {
-                      return { words: 0, paragraphs: 0, sentences: 0, characters: 0 };
-                    }
-
-                    const words = (cleaned.match(/\S+/gu) || []).length;
-                    const normalized = cleaned.replace(/\r\n?/g, '\n');
-                    const paragraphs = normalized
-                      .split(/\n\s*\n+/u)
-                      .map((block) => block
-                        .split('\n')
-                        .map((line) => line.trim())
-                        .filter(Boolean)
-                        .join(' '))
-                      .filter(Boolean).length;
-
-                    const sentenceMarks = cleaned.match(/[.!?…]+(?=\s|$)/gu) || [];
-                    const sentences = sentenceMarks.length || 1;
-                    const characters = [...cleaned].length;
-
-                    return { words, paragraphs, sentences, characters };
-                  };
-
-                  const updateSummary = () => {
-                    const textarea = document.querySelector(
-                      'div[class*="st-key-pasted_text_widget"] textarea, div[data-testid="stTextArea"] textarea'
-                    );
-                    if (!textarea) return;
-
-                    const stats = computeStats(textarea.value);
-                    setStat('td-stat-words', stats.words);
-                    setStat('td-stat-paragraphs', stats.paragraphs);
-                    setStat('td-stat-sentences', stats.sentences);
-                    setStat('td-stat-characters', stats.characters);
-                  };
-
-                  const attach = () => {
-                    const textarea = document.querySelector(
-                      'div[class*="st-key-pasted_text_widget"] textarea, div[data-testid="stTextArea"] textarea'
-                    );
-                    if (!textarea) return;
-
-                    if (textarea !== attachedTextarea) {
-                      if (attachedTextarea) {
-                        attachedTextarea.removeEventListener('input', updateSummary);
-                      }
-                      attachedTextarea = textarea;
-                      textarea.addEventListener('input', updateSummary, { passive: true });
-                    }
-                    updateSummary();
-                  };
-
-                  attach();
-                  const observer = new MutationObserver(attach);
-                  observer.observe(document.body, { childList: true, subtree: true });
-                })();
-                </script>
-                """,
-                unsafe_allow_javascript=True,
-            )
-
-        return value
-
-    _turkdet_text_area._turkdet_text_area = True
+    _turkdet_text_area._turkdet_live_text_area = True
     st.text_area = _turkdet_text_area
 
 
@@ -134,8 +77,7 @@ if hasattr(st, "segmented_control") and not getattr(st.segmented_control, "_turk
     def _turkdet_segmented_control(*args, **kwargs):
         selected = _streamlit_segmented_control(*args, **kwargs)
 
-        key = kwargs.get("key")
-        if key != "input_mode":
+        if kwargs.get("key") != "input_mode":
             return selected
 
         is_dark = st.session_state.get("theme_mode", "dark") == "dark"
