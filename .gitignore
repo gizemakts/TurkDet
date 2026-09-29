@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local configuration / secrets
+.env
+.streamlit/secrets.toml
+
+# Local research data and heavyweight artifacts
+data/raw/
+data/private/
+checkpoints/
+*.joblib
+*.pkl
+*.pt
+*.pth
+*.bin
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
