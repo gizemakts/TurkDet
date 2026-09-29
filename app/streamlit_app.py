@@ -10,6 +10,10 @@ from app.document_parser import DocumentParseError, extract_text, get_document_s
 from app.inference import InferenceUnavailableError, predict_text
 
 
+SHORT_TEXT_NOTICE_WORDS = 30  # UI guidance only; not a scientific validity threshold.
+ACCENT = "#6366F1"
+
+
 st.set_page_config(
     page_title="TürkDet",
     page_icon="🔎",
@@ -21,8 +25,6 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 # Persistent input state
 # ---------------------------------------------------------------------------
-# Streamlit removes widget state when a conditional widget disappears. Keep
-# shadow buffers so an accidental source switch never deletes the user's work.
 st.session_state.setdefault("pasted_text_buffer", "")
 st.session_state.setdefault("uploaded_text_buffer", "")
 st.session_state.setdefault("uploaded_name_buffer", "")
@@ -32,34 +34,44 @@ def _sync_pasted_text() -> None:
     st.session_state["pasted_text_buffer"] = st.session_state.get("pasted_text_widget", "")
 
 
+def _safe_result_message(label: str) -> str:
+    """Translate a binary backend label into cautious user-facing language."""
+    normalized = str(label).strip().upper().replace(" ", "_")
+    if normalized in {"HUMAN", "İNSAN", "INSAN", "0"}:
+        return "Belirgin yapay zekâ izi saptanmadı"
+    if normalized in {"AI", "AI_GENERATED", "AI-GENERATED", "1"}:
+        return "Yapay zekâ üretimiyle uyumlu sinyal saptandı"
+    return "Model çıktısı hazır"
+
+
 st.markdown(
-    """
+    f"""
     <style>
       header[data-testid="stHeader"],
       [data-testid="stToolbar"],
       [data-testid="stDecoration"],
       #MainMenu,
-      footer {
+      footer {{
         display: none !important;
         visibility: hidden !important;
-      }
+      }}
 
-      .block-container {
+      .block-container {{
         max-width: 1180px;
         padding-top: 2rem;
         padding-bottom: 3rem;
-      }
+      }}
 
-      .td-header {
+      .td-header {{
         display:flex;
         align-items:center;
         gap:1rem;
         padding:.35rem 0 1.25rem;
         margin-bottom:1.5rem;
         border-bottom:1px solid rgba(128,128,128,.16);
-      }
-      .td-brand-wrap {display:flex; align-items:center; gap:.8rem;}
-      .td-mark {
+      }}
+      .td-brand-wrap {{display:flex; align-items:center; gap:.8rem;}}
+      .td-mark {{
         width:42px;
         height:42px;
         border-radius:11px;
@@ -71,42 +83,56 @@ st.markdown(
         letter-spacing:-.04em;
         border:1px solid rgba(255,255,255,.14);
         background:rgba(255,255,255,.06);
-      }
-      .td-brand {
+      }}
+      .td-brand {{
         font-size:1.72rem;
         font-weight:800;
         letter-spacing:-.045em;
         line-height:1;
-      }
-      .td-subtitle {opacity:.58; margin-top:.27rem; font-size:.88rem;}
+      }}
+      .td-subtitle {{opacity:.58; margin-top:.27rem; font-size:.88rem;}}
 
-      .td-kicker {
+      .td-kicker {{
         font-size:.76rem;
         font-weight:750;
         letter-spacing:.09em;
         text-transform:uppercase;
         opacity:.50;
         margin-bottom:.45rem;
-      }
-      .td-lead {
+      }}
+      .td-lead {{
         opacity:.70;
         max-width:760px;
-        margin-bottom:1.25rem;
+        margin-bottom:1.1rem;
         line-height:1.55;
-      }
-      .td-upload-copy {
+      }}
+      .td-upload-copy {{
         margin:.5rem 0 .75rem;
         font-size:.88rem;
         opacity:.67;
-      }
+      }}
+      .td-help {{
+        margin:.35rem 0 1rem;
+        font-size:.84rem;
+        opacity:.58;
+      }}
+      .td-note {{
+        border:1px solid rgba(99,102,241,.28);
+        background:rgba(99,102,241,.07);
+        border-radius:12px;
+        padding:.8rem .95rem;
+        margin:.85rem 0 1.15rem;
+        font-size:.88rem;
+        line-height:1.5;
+      }}
 
-      .td-score-card {
+      .td-score-card {{
         border:1px solid rgba(128,128,128,.22);
         border-radius:18px;
         padding:1.4rem 1.25rem;
         background:rgba(128,128,128,.035);
-      }
-      .td-ring {
+      }}
+      .td-ring {{
         --score: 0;
         width:176px;
         height:176px;
@@ -114,72 +140,70 @@ st.markdown(
         border-radius:50%;
         display:grid;
         place-items:center;
-        background:conic-gradient(#ff4b4b calc(var(--score) * 1%), rgba(128,128,128,.18) 0);
+        background:conic-gradient(#ef4444 calc(var(--score) * 1%), rgba(128,128,128,.18) 0);
         position:relative;
-      }
-      .td-ring::after {
+      }}
+      .td-ring::after {{
         content:"";
         width:138px;
         height:138px;
         border-radius:50%;
         background:var(--background-color, #0e1117);
         position:absolute;
-      }
-      .td-ring-value {
+      }}
+      .td-ring-value {{
         position:relative;
         z-index:1;
         font-size:2.35rem;
         font-weight:800;
         letter-spacing:-.05em;
-      }
-      .td-ring-label {
-        text-align:center;
-        font-weight:750;
-        font-size:1rem;
-      }
-      .td-muted {opacity:.62;}
-      .td-center {text-align:center;}
+      }}
+      .td-ring-label {{text-align:center; font-weight:750; font-size:1rem;}}
+      .td-muted {{opacity:.62;}}
+      .td-center {{text-align:center;}}
 
-      .td-doc {
+      .td-doc {{
         border:1px solid rgba(128,128,128,.20);
         border-radius:16px;
         background:rgba(128,128,128,.025);
         padding:1.05rem 1.15rem;
-      }
-      .td-paragraph {
+      }}
+      .td-paragraph {{
         padding:.85rem .95rem;
         margin:.6rem 0;
         border-radius:10px;
         background:rgba(128,128,128,.045);
         border-left:3px solid rgba(128,128,128,.28);
-      }
-      .td-paragraph-head {
+      }}
+      .td-paragraph-head {{
         font-size:.76rem;
         font-weight:700;
         opacity:.52;
         margin-bottom:.35rem;
-      }
+      }}
 
-      div[data-testid="stTextArea"] textarea {
+      div[data-testid="stTextArea"] textarea {{
         border-radius:14px;
         min-height:280px;
-      }
+      }}
+      div[data-testid="stTextArea"] textarea:focus {{
+        border-color:{ACCENT} !important;
+        box-shadow:0 0 0 1px {ACCENT} !important;
+      }}
 
-      div[data-testid="stFileUploader"] section {
+      div[data-testid="stFileUploader"] section {{
         border-radius:14px;
         padding-top:1rem;
         padding-bottom:1rem;
-      }
+      }}
 
-      div[data-testid="stFileUploader"] button {
+      div[data-testid="stFileUploader"] button {{
         position:relative;
         color:transparent !important;
         min-width:112px;
-      }
-      div[data-testid="stFileUploader"] button > * {
-        display:none !important;
-      }
-      div[data-testid="stFileUploader"] button::after {
+      }}
+      div[data-testid="stFileUploader"] button > * {{display:none !important;}}
+      div[data-testid="stFileUploader"] button::after {{
         content:"Belge seç";
         position:absolute;
         inset:0;
@@ -189,36 +213,34 @@ st.markdown(
         color:var(--text-color, #fafafa);
         font-size:.9rem;
         font-weight:700;
-      }
+      }}
 
-      div[data-testid="stButton"] > button[kind="primary"] {
+      div[data-testid="stButton"] > button[kind="primary"] {{
         min-height:50px;
         border-radius:11px;
         font-weight:780;
         transition:transform .12s ease, filter .12s ease;
-      }
-      div[data-testid="stButton"] > button[kind="primary"]:not(:disabled) {
-        background:#ff4b4b;
-        border-color:#ff4b4b;
+      }}
+      div[data-testid="stButton"] > button[kind="primary"]:not(:disabled) {{
+        background:{ACCENT};
+        border-color:{ACCENT};
         color:#fff;
-      }
-      div[data-testid="stButton"] > button[kind="primary"]:not(:disabled):hover {
-        filter:brightness(1.06);
+      }}
+      div[data-testid="stButton"] > button[kind="primary"]:not(:disabled):hover {{
+        filter:brightness(1.07);
         transform:translateY(-1px);
-      }
-      div[data-testid="stButton"] > button[kind="primary"]:disabled {
-        opacity:.48;
-      }
+      }}
+      div[data-testid="stButton"] > button[kind="primary"]:disabled {{opacity:.48;}}
 
-      div[data-testid="stSegmentedControl"] {margin-bottom:.35rem;}
-      div[data-testid="stSegmentedControl"] button {font-weight:680;}
+      div[data-testid="stSegmentedControl"] {{margin-bottom:.35rem;}}
+      div[data-testid="stSegmentedControl"] button {{font-weight:680;}}
 
-      @media (max-width: 700px) {
-        .block-container {padding-top:1.25rem;}
-        .td-subtitle {display:none;}
-        .td-mark {width:38px; height:38px;}
-        .td-brand {font-size:1.55rem;}
-      }
+      @media (max-width: 700px) {{
+        .block-container {{padding-top:1.25rem;}}
+        .td-subtitle {{display:none;}}
+        .td-mark {{width:38px; height:38px;}}
+        .td-brand {{font-size:1.55rem;}}
+      }}
     </style>
     """,
     unsafe_allow_html=True,
@@ -245,6 +267,10 @@ st.markdown(
     '<div class="td-lead">Metni doğrudan yapıştırın veya TXT, DOCX ya da metin katmanına sahip PDF belgesi yükleyin.</div>',
     unsafe_allow_html=True,
 )
+st.markdown(
+    '<div class="td-note"><strong>Kapsam notu:</strong> TürkDet’in desteklediği metin türleri ve güvenilir kullanım aralığı, akademik ve gazete metinleri üzerindeki doğrulama tamamlandıkça güncellenecektir. Sonuçlar olasılıksaldır ve tek başına yazarlık kanıtı değildir.</div>',
+    unsafe_allow_html=True,
+)
 
 input_mode = st.segmented_control(
     "Giriş yöntemi",
@@ -259,7 +285,6 @@ text = ""
 uploaded_name = ""
 
 if input_mode == "Metin yapıştır":
-    # Restore the saved draft whenever this control is rendered again.
     if "pasted_text_widget" not in st.session_state:
         st.session_state["pasted_text_widget"] = st.session_state["pasted_text_buffer"]
 
@@ -271,9 +296,12 @@ if input_mode == "Metin yapıştır":
         key="pasted_text_widget",
         on_change=_sync_pasted_text,
     )
-    # Also save on every render so no interaction can lose the latest value.
     st.session_state["pasted_text_buffer"] = pasted_text
     text = pasted_text.strip()
+    st.markdown(
+        '<div class="td-help">Ctrl+Enter gerekmez. Metin alanından çıktığınızda sayaçlar otomatik güncellenir; Analizi Başlat düğmesi en son metni kullanır.</div>',
+        unsafe_allow_html=True,
+    )
 
 elif input_mode == "Belge yükle":
     st.markdown(
@@ -304,14 +332,13 @@ elif input_mode == "Belge yükle":
             with st.expander("Çıkarılan metni önizle"):
                 st.write(text[:8000])
     elif st.session_state["uploaded_text_buffer"]:
-        # The uploader widget itself may be recreated after a source switch, but
-        # the already extracted document remains available in the session.
         text = st.session_state["uploaded_text_buffer"]
         uploaded_name = st.session_state["uploaded_name_buffer"]
         st.info(f"Son yüklenen belge korunuyor: {uploaded_name}")
         with st.expander("Çıkarılan metni önizle"):
             st.write(text[:8000])
 
+stats = None
 if text:
     stats = get_document_stats(text)
     st.markdown("#### Belge özeti")
@@ -321,11 +348,22 @@ if text:
     c3.metric("Yaklaşık cümle", stats.sentences_approx)
     c4.metric("Karakter", f"{stats.characters:,}".replace(",", "."))
 
+    if stats.words < SHORT_TEXT_NOTICE_WORDS:
+        st.warning(
+            "Metin çok kısa görünüyor. Kısa metinlerde model sinyalleri kararsız olabilir; "
+            "güvenilir minimum uzunluk nihai doğrulama tamamlandığında belirlenecektir."
+        )
+
 analyze = st.button(
     "Analizi Başlat",
     type="primary",
     use_container_width=True,
     disabled=not bool(text),
+)
+
+st.caption(
+    "Yerel demo metni kalıcı bir dosyaya yazmak üzere tasarlanmamıştır. "
+    "Bulut sürümü yayınlanmadan önce veri işleme ve gizlilik politikası ayrıca doğrulanacaktır."
 )
 
 if analyze:
@@ -418,7 +456,7 @@ if analyze:
                 """,
                 unsafe_allow_html=True,
             )
-            st.metric("Model kararı", result.label)
+            st.metric("Sonuç", _safe_result_message(result.label))
             st.caption(
                 "Bu skor olasılıksal bir model çıktısıdır; tek başına kesin yazarlık veya ihlal kanıtı değildir."
             )
