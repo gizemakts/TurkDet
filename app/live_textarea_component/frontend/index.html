@@ -66,19 +66,13 @@
     function applyProps(props) {
       const nextValue = typeof props.value === "string" ? props.value : "";
       const active = document.activeElement === editor;
-      const start = editor.selectionStart;
-      const end = editor.selectionEnd;
 
-      if (editor.value !== nextValue) {
+      // While the user is actively typing, a Streamlit rerun can arrive with a
+      // slightly older value than the browser currently contains. Never replace
+      // focused local edits with that stale prop. Once focus leaves the editor,
+      // blur commits the latest value and future renders may safely resync it.
+      if (!active && editor.value !== nextValue) {
         editor.value = nextValue;
-        if (active) {
-          const safeStart = Math.min(start ?? nextValue.length, nextValue.length);
-          const safeEnd = Math.min(end ?? nextValue.length, nextValue.length);
-          requestAnimationFrame(() => {
-            editor.focus();
-            editor.setSelectionRange(safeStart, safeEnd);
-          });
-        }
       }
 
       editor.placeholder = props.placeholder || "";
