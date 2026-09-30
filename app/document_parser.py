@@ -70,6 +70,82 @@ def _decode_text_file(content: bytes) -> str:
     raise DocumentParseError("Metin dosyasının karakter kodlaması okunamadı.")
 
 
+def _normalize_pdf_page_text(text: str) -> str:
+    """Normalize PDF hard line breaks without pretending to perform OCR.
+
+    PDFs often store visually continuous text as many independent drawing
+    fragments. Layout extraction improves reading order, but list-heavy PDFs can
+    still contain artificial blank lines between fragments. When a page clearly
+    looks like a numbered list, reconstruct each numbered item as one paragraph.
+    Otherwise preserve real blank-line paragraph boundaries and only join wrapped
+    lines inside each block.
+    """
+    normalized = (
+        text.replace("\r\n", "\n")
+        .replace("\r", "\n")
+        .replace("\u00a0", " ")
+        .strip()
+    )
+    if not normalized:
+        return ""
+
+    lines = [re.sub(r"[ \t]+", " ", line).strip() for line in normalized.splitlines()]
+    nonempty = [line for line in lines if line]
+    if not nonempty:
+        return ""
+
+    flattened = " ".join(nonempty)
+    flattened = re.sub(r"\s+", " ", flattened).strip()
+
+    # Typical bibliography/directory pages (1. ..., 2. ..., 3. ...) are often
+    # fragmented into separate PDF text objects. Rebuild those items so words
+    # such as "Gazi / Eğitim / Fakültesi / Dergisi" do not become fake paragraphs.
+    numbered_markers = list(re.finditer(r"(?<!\w)\d{1,3}\.\s+(?=\S)", flattened))
+    if len(numbered_markers) >= 2:
+        chunks = [
+            chunk.strip()
+            for chunk in re.split(r"(?=(?<!\w)\d{1,3}\.\s+(?=\S))", flattened)
+            if chunk.strip()
+        ]
+        if chunks:
+            return "\n\n".join(chunks)
+
+    blocks = re.split(r"\n\s*\n+", normalized)
+    cleaned_blocks: list[str] = []
+    for block in blocks:
+        block_lines = [
+            re.sub(r"[ \t]+", " ", line).strip()
+            for line in block.splitlines()
+            if line.strip()
+        ]
+        if not block_lines:
+            continue
+
+        joined = ""
+        for line in block_lines:
+            if not joined:
+                joined = line
+                continue
+            # Rejoin ordinary line wrapping. If a PDF split a hyphenated word at
+            # the line boundary, avoid inserting an additional space.
+            if joined.endswith("-") and re.match(r"^[a-zçğıöşü]", line):
+                joined = joined[:-1] + line
+            else:
+                joined += " " + line
+        cleaned_blocks.append(joined.strip())
+
+    return "\n\n".join(cleaned_blocks)
+
+
+def _extract_pdf_page_text(page) -> str:
+    """Prefer pypdf's layout-aware extraction, with a safe plain fallback."""
+    try:
+        text = page.extract_text(extraction_mode="layout") or ""
+    except (TypeError, ValueError, NotImplementedError):
+        text = page.extract_text() or ""
+    return _normalize_pdf_page_text(text)
+
+
 def extract_text(filename: str, content: bytes) -> str:
     """Extract text from a supported uploaded file.
 
@@ -102,7 +178,7 @@ def extract_text(filename: str, content: bytes) -> str:
             from pypdf import PdfReader
 
             reader = PdfReader(BytesIO(content))
-            page_texts = [(page.extract_text() or "").strip() for page in reader.pages]
+            page_texts = [_extract_pdf_page_text(page) for page in reader.pages]
             text = "\n\n".join(page_text for page_text in page_texts if page_text)
         except Exception as exc:  # encrypted/corrupt PDFs surface varied errors
             raise DocumentParseError("PDF dosyası okunamadı.") from exc
