@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from . import result_ui_overrides as _result_ui_overrides  # noqa: F401
 from .model_loader import get_model_status
 
 
