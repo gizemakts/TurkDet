@@ -46,6 +46,13 @@ from .result_layout_spacing import install_result_layout_spacing as _install_res
 _install_result_layout_spacing()
 
 
+# Keep the input-mode selector sticky when the selected segment is clicked again
+# and normalize the public-facing score label without changing model behavior.
+from .input_behavior_fixes import install_input_behavior_fixes as _install_input_behavior_fixes
+
+_install_input_behavior_fixes()
+
+
 # Install Streamlit-only persistence after the inference API above exists. This
 # keeps the visible analysis stable when the theme toggle reruns the app while
 # preserving the same analyzed input and cached report output.
