@@ -205,23 +205,19 @@ def _install_expander_theme_override() -> None:
     def _turkdet_expander(label, *args, **kwargs):
         is_dark = st.session_state.get("theme_mode", "dark") == "dark"
         if is_dark:
-            surface = "rgba(255,255,255,.025)"
-            content = "#0E131C"
             text = "#F4F7FB"
             muted = "#97A3B6"
             border = "rgba(255,255,255,.105)"
         else:
-            surface = "rgba(99,102,241,.025)"
-            content = "#FFFFFF"
             text = "#111827"
             muted = "#667085"
             border = "rgba(15,23,42,.105)"
 
-        # Deliberately use the same translucent indigo header in both themes.
-        # Streamlit toggles theme through a rerun, so a theme-specific dark/light
-        # header creates a visible black-to-white flash while the new render is
-        # replacing the old one. Keeping the header chroma stable removes that
-        # perceptual jump while the surrounding page changes theme normally.
+        # Keep both the header and body chroma stable across theme-triggered
+        # reruns. Their translucent surfaces naturally follow the page beneath
+        # them, avoiding the old light-mode #FFFFFF frame flashing in dark mode.
+        surface = "rgba(99,102,241,.025)"
+        content = "rgba(99,102,241,.018)"
         header = "rgba(99,102,241,.085)"
         header_hover = "rgba(99,102,241,.125)"
 
@@ -231,10 +227,11 @@ def _install_expander_theme_override() -> None:
               details[data-testid="stExpander"],
               [data-testid="stExpander"] {{
                 background:{surface} !important;
+                background-color:{surface} !important;
                 border:1px solid {border} !important;
                 border-radius:12px !important;
                 overflow:hidden !important;
-                transition:background-color .18s ease,border-color .18s ease !important;
+                transition:border-color .18s ease !important;
               }}
 
               details[data-testid="stExpander"] > summary,
@@ -248,7 +245,7 @@ def _install_expander_theme_override() -> None:
                 border:0 !important;
                 outline:0 !important;
                 box-shadow:none !important;
-                transition:background-color .16s ease,color .16s ease !important;
+                transition:color .16s ease !important;
               }}
 
               [data-testid="stExpander"] summary:hover {{
@@ -274,7 +271,13 @@ def _install_expander_theme_override() -> None:
                 background-color:{content} !important;
                 color:{text} !important;
                 border-top:1px solid {border} !important;
-                transition:background-color .18s ease,color .18s ease,border-color .18s ease !important;
+                transition:color .18s ease,border-color .18s ease !important;
+              }}
+
+              [data-testid="stExpanderDetails"] > div,
+              [data-testid="stExpanderDetails"] [data-testid="stMarkdownContainer"] {{
+                background:transparent !important;
+                background-color:transparent !important;
               }}
 
               [data-testid="stExpanderDetails"] p,
