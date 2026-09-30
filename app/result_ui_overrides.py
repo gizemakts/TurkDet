@@ -114,6 +114,12 @@ def _install_streamlit_result_overrides() -> None:
                         font-weight:700;
                       }}
 
+                      /* Give the report action enough breathing room without loosening the whole panel. */
+                      .stApp div[data-testid="stDownloadButton"] {{
+                        margin-top:.78rem !important;
+                        margin-bottom:.32rem !important;
+                      }}
+
                       /* PDF report action: intentionally independent from model availability. */
                       .stApp div[data-testid="stDownloadButton"] button,
                       .stApp div[data-testid="stDownloadButton"] a,
