@@ -26,7 +26,11 @@ def install_input_behavior_fixes() -> None:
                 # become None when the already-selected item is clicked again.
                 # Restore the last valid value before the widget is instantiated
                 # on this rerun so both behavior and styling stay consistent.
-                if st.session_state.get(key) is None and last_valid:
+                if (
+                    key in st.session_state
+                    and st.session_state.get(key) is None
+                    and last_valid
+                ):
                     st.session_state[key] = last_valid
 
             selected = native_segmented_control(*args, **kwargs)
