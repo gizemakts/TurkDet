@@ -272,6 +272,8 @@ def _install_streamlit_result_overrides() -> None:
                 return None
             if "TürkDet, gerçek model bağlı değilken yüzde veya karar üretmez" in text:
                 return None
+            if text.startswith("Rapor No:") and " · Girdi SHA-256:" in text:
+                body = text.split(" · Girdi SHA-256:", 1)[0]
         return native_caption(body, *args, **kwargs)
 
     def polished_warning(body, *args, **kwargs):
@@ -296,10 +298,22 @@ def _install_pdf_copy_overrides() -> None:
         return
 
     native_paragraph = report_pdf.Paragraph
+    native_table = report_pdf.Table
     native_builder = report_pdf.build_analysis_report
+    suppress_next_table = {"value": False}
+
+    class _HiddenBlock(report_pdf.Spacer):
+        def __init__(self):
+            super().__init__(1, 0)
+
+        def setStyle(self, *_args, **_kwargs):
+            return None
 
     def clean_paragraph(text, *args, **kwargs):
         if isinstance(text, str):
+            if text.strip() == "Girdi doğrulama bilgisi":
+                suppress_next_table["value"] = True
+                return report_pdf.Spacer(1, 0)
             text = text.replace(
                 " SHA-256 değeri analiz edilen girdiyi tanımlar; bu PDF henüz kriptografik olarak dijital imzalanmış değildir.",
                 "",
@@ -310,6 +324,12 @@ def _install_pdf_copy_overrides() -> None:
             )
         return native_paragraph(text, *args, **kwargs)
 
+    def clean_table(*args, **kwargs):
+        if suppress_next_table["value"]:
+            suppress_next_table["value"] = False
+            return _HiddenBlock()
+        return native_table(*args, **kwargs)
+
     def clean_builder(*args, **kwargs):
         if kwargs.get("model_available") is False:
             kwargs["status_note"] = None
@@ -317,6 +337,7 @@ def _install_pdf_copy_overrides() -> None:
         return native_builder(*args, **kwargs)
 
     report_pdf.Paragraph = clean_paragraph
+    report_pdf.Table = clean_table
     report_pdf.build_analysis_report = clean_builder
     report_pdf._turkdet_copy_polish = True
 
