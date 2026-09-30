@@ -32,7 +32,8 @@ def test_report_is_pdf_and_contains_core_fields():
     assert 'TürkDet Analiz Raporu' in extracted
     assert 'ornek.pdf' in extracted
     assert 'Belge özeti' in extracted
-    assert 'SHA-256' in extracted
+    assert 'Girdi doğrulama bilgisi' not in extracted
+    assert 'SHA-256' not in extracted
     assert 'Türkçe karakter testi' in extracted
 
 
