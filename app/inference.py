@@ -39,6 +39,13 @@ def predict_text(text: str) -> Prediction:
     )
 
 
+# Install result-only layout refinements after the base result overrides are in
+# place. This keeps the main input layout untouched.
+from .result_layout_spacing import install_result_layout_spacing as _install_result_layout_spacing
+
+_install_result_layout_spacing()
+
+
 # Install Streamlit-only persistence after the inference API above exists. This
 # keeps the visible analysis stable when the theme toggle reruns the app while
 # preserving the same analyzed input and cached report output.
