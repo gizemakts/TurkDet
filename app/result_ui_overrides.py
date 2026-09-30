@@ -27,6 +27,7 @@ def _install_streamlit_result_overrides() -> None:
     native_caption = st.caption
     native_warning = st.warning
     native_info = st.info
+    native_download_button = st.download_button
 
     def polished_markdown(body, *args, **kwargs):
         if isinstance(body, str):
@@ -112,6 +113,27 @@ def _install_streamlit_result_overrides() -> None:
                         white-space:nowrap;
                         font-size:.82rem;
                         font-weight:700;
+                      }}
+                      div[data-testid="stDownloadButton"] > button,
+                      div[data-testid="stDownloadButton"] > a {{
+                        min-height:46px !important;
+                        border-radius:12px !important;
+                        border:1px solid transparent !important;
+                        background:linear-gradient(135deg,#6366F1,#7377F5) !important;
+                        color:#FFFFFF !important;
+                        font-weight:780 !important;
+                        box-shadow:0 10px 24px rgba(99,102,241,.22) !important;
+                        transition:transform .12s ease,filter .12s ease,box-shadow .12s ease !important;
+                      }}
+                      div[data-testid="stDownloadButton"] > button:hover,
+                      div[data-testid="stDownloadButton"] > a:hover {{
+                        filter:brightness(1.045) !important;
+                        transform:translateY(-1px) !important;
+                        box-shadow:0 13px 28px rgba(99,102,241,.26) !important;
+                      }}
+                      div[data-testid="stDownloadButton"] button *,
+                      div[data-testid="stDownloadButton"] a * {{
+                        color:#FFFFFF !important;
                       }}
                     </style>
                     <div id="turkdet-analysis-report" class="td-report-head">
@@ -224,7 +246,12 @@ def _install_streamlit_result_overrides() -> None:
                 )
 
             if "Model bağlantısı bekleniyor" in body:
-                body = body.replace("Model bağlantısı bekleniyor", "Analiz sonucu kullanılamıyor")
+                body = re.sub(
+                    r'\s*<div class="td-center td-muted"[^>]*>Model bağlantısı bekleniyor</div>\s*',
+                    "",
+                    body,
+                    flags=re.DOTALL,
+                )
 
         return native_markdown(body, *args, **kwargs)
 
@@ -236,6 +263,8 @@ def _install_streamlit_result_overrides() -> None:
             if "Paragraf skorları, segment düzeyindeki doğrulama tamamlandığında" in text:
                 return None
             if "TürkDet, gerçek model bağlı değilken yüzde veya karar üretmez" in text:
+                return None
+            if st.session_state.get("_turkdet_hide_unavailable_report", False) and text.startswith("Rapor No:"):
                 return None
         return native_caption(body, *args, **kwargs)
 
@@ -249,11 +278,18 @@ def _install_streamlit_result_overrides() -> None:
             return None
         return native_info(body, *args, **kwargs)
 
+    def polished_download_button(label, *args, **kwargs):
+        key = str(kwargs.get("key", "") or "")
+        if st.session_state.get("_turkdet_hide_unavailable_report", False) and key.startswith("download_report_"):
+            return False
+        return native_download_button(label, *args, **kwargs)
+
     polished_markdown._turkdet_result_polish = True
     st.markdown = polished_markdown
     st.caption = polished_caption
     st.warning = polished_warning
     st.info = polished_info
+    st.download_button = polished_download_button
 
 
 def _install_pdf_copy_overrides() -> None:
@@ -276,7 +312,9 @@ def _install_pdf_copy_overrides() -> None:
         return native_paragraph(text, *args, **kwargs)
 
     def clean_builder(*args, **kwargs):
-        if kwargs.get("model_available") is False:
+        unavailable = kwargs.get("model_available") is False
+        st.session_state["_turkdet_hide_unavailable_report"] = unavailable
+        if unavailable:
             kwargs["status_note"] = None
             kwargs["result_message"] = "Analiz sonucu üretilemedi"
         return native_builder(*args, **kwargs)
