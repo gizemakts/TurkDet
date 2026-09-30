@@ -8,6 +8,7 @@ import streamlit as st
 
 from app.document_parser import DocumentParseError, extract_text, get_document_stats, split_paragraphs
 from app.inference import InferenceUnavailableError, predict_text
+from app.report_pdf import build_analysis_report
 
 
 MIN_WORDS = 30  # Temporary UI guard; not a validated scientific threshold.
@@ -62,6 +63,53 @@ def _render_document(paragraphs: list[str], caption: str) -> None:
     else:
         st.info("Belgede gösterilecek paragraf bulunamadı.")
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+def _report_source_bytes(uploaded_name: str) -> bytes | None:
+    if not uploaded_name:
+        return None
+    for key in ("selected_document_data", "uploaded_data_buffer"):
+        data = st.session_state.get(key, b"")
+        if isinstance(data, (bytes, bytearray)) and data:
+            return bytes(data)
+    return None
+
+
+def _render_report_download(
+    *,
+    text: str,
+    uploaded_name: str,
+    stats,
+    result_message: str,
+    ai_probability: float | None,
+    model_available: bool,
+    status_note: str | None = None,
+) -> None:
+    report = build_analysis_report(
+        text=text,
+        source_name=uploaded_name or "Yapıştırılan metin",
+        source_bytes=_report_source_bytes(uploaded_name),
+        words=stats.words,
+        paragraphs=stats.paragraphs,
+        sentences_approx=stats.sentences_approx,
+        characters=stats.characters,
+        result_message=result_message,
+        ai_probability=ai_probability,
+        model_available=model_available,
+        status_note=status_note,
+    )
+    st.download_button(
+        "PDF Raporunu İndir",
+        data=report.pdf_bytes,
+        file_name=report.file_name,
+        mime="application/pdf",
+        use_container_width=True,
+        on_click="ignore",
+        key=f"download_report_{report.report_id}",
+    )
+    st.caption(
+        f"Rapor No: {report.report_id} · Girdi SHA-256: {report.input_sha256[:16]}…"
+    )
 
 
 is_dark = st.session_state["theme_mode"] == "dark"
@@ -826,7 +874,7 @@ if analyze:
         result = predict_text(text)
     except ValueError as exc:
         st.error(str(exc))
-    except InferenceUnavailableError as exc:
+    except InferenceUnavailableError:
         left, right = st.columns([2.15, 1], gap="large")
 
         with left:
@@ -849,11 +897,24 @@ if analyze:
                 """,
                 unsafe_allow_html=True,
             )
-            st.warning(str(exc))
+            st.info("Doğrulanmış üretim modeli henüz web uygulamasına bağlanmadı.")
             st.caption("TürkDet, gerçek model bağlı değilken yüzde veya karar üretmez.")
+            _render_report_download(
+                text=text,
+                uploaded_name=uploaded_name,
+                stats=stats,
+                result_message="Analiz sonucu üretilemedi",
+                ai_probability=None,
+                model_available=False,
+                status_note=(
+                    "Doğrulanmış üretim modeli henüz uygulamaya bağlanmadığı için "
+                    "bu raporda yüzde veya karar yer almaz."
+                ),
+            )
 
     else:
         score_percent = max(0.0, min(100.0, result.ai_probability * 100.0))
+        result_message = _safe_result_message(result.label)
         left, right = st.columns([2.15, 1], gap="large")
 
         with left:
@@ -876,9 +937,17 @@ if analyze:
                 """,
                 unsafe_allow_html=True,
             )
-            st.metric("Sonuç", _safe_result_message(result.label))
+            st.metric("Sonuç", result_message)
             st.caption(
                 "Bu skor olasılıksal bir model çıktısıdır; tek başına kesin yazarlık veya ihlal kanıtı değildir."
+            )
+            _render_report_download(
+                text=text,
+                uploaded_name=uploaded_name,
+                stats=stats,
+                result_message=result_message,
+                ai_probability=result.ai_probability,
+                model_available=True,
             )
 
     if len(paragraphs) > 30:
