@@ -37,3 +37,11 @@ def predict_text(text: str) -> Prediction:
         "Model artifact mevcut, ancak mevcut araştırma kodundaki doğrulanmış inference "
         "giriş noktası henüz bu adaptöre bağlanmadı."
     )
+
+
+# Install Streamlit-only persistence after the inference API above exists. This
+# keeps the visible analysis stable when the theme toggle reruns the app while
+# preserving the same analyzed input and cached report output.
+from .analysis_persistence import install_analysis_persistence as _install_analysis_persistence
+
+_install_analysis_persistence()
