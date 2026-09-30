@@ -14,6 +14,7 @@ from app import report_pdf
 _TECHNICAL_MODEL_MARKERS = (
     "TURKDET_MODEL_PATH",
     "Üretim modeli henüz web uygulamasına bağlanmadı",
+    "Doğrulanmış üretim modeli henüz web uygulamasına bağlanmadı",
     "Model artifact mevcut",
 )
 
@@ -25,6 +26,7 @@ def _install_streamlit_result_overrides() -> None:
     native_markdown = st.markdown
     native_caption = st.caption
     native_warning = st.warning
+    native_info = st.info
 
     def polished_markdown(body, *args, **kwargs):
         if isinstance(body, str):
@@ -123,10 +125,87 @@ def _install_streamlit_result_overrides() -> None:
                 components.html(
                     """
                     <script>
-                      window.setTimeout(() => {
-                        const node = window.parent.document.getElementById("turkdet-analysis-report");
-                        if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }, 120);
+                      (() => {
+                        const hostWindow = window.parent;
+                        const doc = hostWindow.document;
+                        const report = doc.getElementById("turkdet-analysis-report");
+
+                        window.setTimeout(() => {
+                          if (report) report.scrollIntoView({ behavior: "smooth", block: "start" });
+                        }, 120);
+
+                        let button = doc.getElementById("turkdet-back-to-top");
+                        if (!button) {
+                          button = doc.createElement("button");
+                          button.id = "turkdet-back-to-top";
+                          button.type = "button";
+                          button.setAttribute("aria-label", "Yukarı dön");
+                          button.setAttribute("title", "Yukarı dön");
+                          button.innerHTML = `
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                              <path d="m6 15 6-6 6 6"></path>
+                            </svg>`;
+
+                          Object.assign(button.style, {
+                            position: "fixed",
+                            right: "24px",
+                            bottom: "24px",
+                            width: "42px",
+                            height: "42px",
+                            display: "grid",
+                            placeItems: "center",
+                            padding: "0",
+                            borderRadius: "12px",
+                            border: "1px solid rgba(99,102,241,.34)",
+                            background: "rgba(99,102,241,.16)",
+                            color: "#818CF8",
+                            boxShadow: "0 10px 30px rgba(15,23,42,.18)",
+                            backdropFilter: "blur(12px)",
+                            WebkitBackdropFilter: "blur(12px)",
+                            cursor: "pointer",
+                            zIndex: "999999",
+                            opacity: "0",
+                            pointerEvents: "none",
+                            transform: "translateY(8px)",
+                            transition: "opacity .18s ease, transform .18s ease, background .16s ease, border-color .16s ease"
+                          });
+
+                          button.addEventListener("mouseenter", () => {
+                            button.style.background = "rgba(99,102,241,.24)";
+                            button.style.borderColor = "rgba(99,102,241,.58)";
+                          });
+                          button.addEventListener("mouseleave", () => {
+                            button.style.background = "rgba(99,102,241,.16)";
+                            button.style.borderColor = "rgba(99,102,241,.34)";
+                          });
+                          button.addEventListener("click", () => {
+                            hostWindow.scrollTo({ top: 0, behavior: "smooth" });
+                            const scroller = doc.querySelector('[data-testid="stAppViewContainer"]');
+                            if (scroller && typeof scroller.scrollTo === "function") {
+                              scroller.scrollTo({ top: 0, behavior: "smooth" });
+                            }
+                          });
+                          doc.body.appendChild(button);
+                        }
+
+                        const scroller = doc.querySelector('[data-testid="stAppViewContainer"]');
+                        const currentOffset = () => Math.max(
+                          hostWindow.scrollY || 0,
+                          doc.documentElement ? doc.documentElement.scrollTop || 0 : 0,
+                          doc.body ? doc.body.scrollTop || 0 : 0,
+                          scroller ? scroller.scrollTop || 0 : 0
+                        );
+                        const syncButton = () => {
+                          const visible = currentOffset() > 220;
+                          button.style.opacity = visible ? "1" : "0";
+                          button.style.pointerEvents = visible ? "auto" : "none";
+                          button.style.transform = visible ? "translateY(0)" : "translateY(8px)";
+                        };
+
+                        hostWindow.addEventListener("scroll", syncButton, { passive: true });
+                        if (scroller) scroller.addEventListener("scroll", syncButton, { passive: true });
+                        window.setTimeout(syncButton, 260);
+                      })();
                     </script>
                     """,
                     height=0,
@@ -165,10 +244,16 @@ def _install_streamlit_result_overrides() -> None:
             return None
         return native_warning(body, *args, **kwargs)
 
+    def polished_info(body, *args, **kwargs):
+        if isinstance(body, str) and any(marker in body for marker in _TECHNICAL_MODEL_MARKERS):
+            return None
+        return native_info(body, *args, **kwargs)
+
     polished_markdown._turkdet_result_polish = True
     st.markdown = polished_markdown
     st.caption = polished_caption
     st.warning = polished_warning
+    st.info = polished_info
 
 
 def _install_pdf_copy_overrides() -> None:
