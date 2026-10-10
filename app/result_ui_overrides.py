@@ -56,7 +56,13 @@ def _install_streamlit_result_overrides() -> None:
             stripped = body.strip()
 
             if stripped == "## TürkDet Analiz Raporu":
-                file_name = str(st.session_state.get("uploaded_name_buffer", "") or "")
+                # The uploaded file persists between tabs, but the result chip
+                # must describe the source of the current analysis only.
+                file_name = (
+                    str(st.session_state.get("uploaded_name_buffer", "") or "")
+                    if st.session_state.get("input_mode") == "Belge yükle"
+                    else ""
+                )
                 file_chip = ""
                 if file_name:
                     suffix = file_name.rsplit(".", 1)[-1].upper() if "." in file_name else "BELGE"
